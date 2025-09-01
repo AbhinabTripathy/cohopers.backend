@@ -15,7 +15,6 @@ app.use(express.urlencoded({extended: true,}));
 app.use(responseMessages);
 
 
-// const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");
 const inventoryRoutes = require("./routes/inventory.routes");
