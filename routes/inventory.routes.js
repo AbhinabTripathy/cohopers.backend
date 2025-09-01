@@ -1,16 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const inventoryController = require('../controllers/inventory.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+const authMiddleware = require('../middlewares/authAdminMiddleware');
 
-// Apply auth middleware to all routes
-router.use(authMiddleware);
-
-// Space management routes
-router.post('/spaces', inventoryController.uploadSpaceImages, inventoryController.addSpace);
+//public routes
 router.get('/spaces', inventoryController.getAllSpaces);
 router.get('/spaces/:id', inventoryController.getSpaceById);
-router.put('/spaces/:id', inventoryController.uploadSpaceImages, inventoryController.updateSpace);
-router.delete('/spaces/:id', inventoryController.deleteSpace);
+// procted route only for ADMIN 
+router.post('/spaces', authMiddleware,inventoryController.uploadSpaceImages, inventoryController.addSpace);
+router.put('/spaces/:id', authMiddleware,inventoryController.uploadSpaceImages, inventoryController.updateSpace);
+router.delete('/spaces/:id', authMiddleware,inventoryController.deleteSpace);
 
 module.exports = router;

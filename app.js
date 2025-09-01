@@ -1,8 +1,8 @@
 const express = require("express");
 require("dotenv").config();
 const sequelize = require("./config/db");
-const sendResponse = require("./middlewares/response.middleware");
-const handleNotFound = require("./middlewares/notFound,middleware");
+const responseMessages = require("./middlewares/response.middleware");
+const handleNotFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/errorHandler.middleware");
 require("./models");
 
@@ -12,18 +12,22 @@ const baseUrl = process.env.BASE_URL;
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true,}));
+app.use(responseMessages);
 
-// Comment out or remove this line if you don't need auth routes yet
+
 // const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
+const userRoutes = require("./routes/user.routes");
 const inventoryRoutes = require("./routes/inventory.routes");
-// Comment out or remove this line if you don't need auth routes yet
-// app.use("/api/auth", authRoutes);
+const bookingRoutes = require("./routes/booking.routes");
+
+
 app.use("/api/admin", adminRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/inventory",inventoryRoutes);
+app.use("/api/booking",bookingRoutes);
 
 //middlewares
-app.use(sendResponse);
 app.use(handleNotFound);
 app.use(errorHandler);
 
@@ -33,7 +37,7 @@ async function startServer() {
     console.log("Database connection establish successfully");
 
     //for any schema changes
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
 
     app.listen(port, () => {
       console.log(`Server running at :${baseUrl}`);

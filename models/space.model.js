@@ -7,24 +7,36 @@ const Space = sequelize.define('Space', {
     primaryKey: true,
     autoIncrement: true
   },
-  roomNumber: {
+  space_name: {   // Executive Cabin, Private Cabin, etc
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true,
   },
-  cabinNumber: {
-    type: DataTypes.STRING,
-    allowNull: false
+  seater: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
   price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false
+  },
+  gst: {
+    type: DataTypes.DECIMAL(5, 2),
+    defaultValue: 18.00   // default 18% GST
+  },
+  finalPrice: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   },
   availability: {
     type: DataTypes.ENUM('AVAILABLE', 'AVAILABLE_SOON', 'NOT_AVAILABLE'),
     defaultValue: 'AVAILABLE'
   },
   images: {
-    type: DataTypes.JSON, // Store array of image paths
+    type: DataTypes.JSON, // multiple images
     allowNull: false
   },
   createdAt: {
