@@ -34,8 +34,8 @@ module.exports = {
         defaultValue: true
       },
       availability: {
-        type: Sequelize.ENUM("AVAILABLE", "AVAILABLE_SOON", "NOT_AVAILABLE"),
-        defaultValue: "AVAILABLE"
+          type: DataTypes.ENUM('Available', 'Available Soon', 'Not Available'),
+          allowNull:false
       },
       images: {
         type: Sequelize.JSON,

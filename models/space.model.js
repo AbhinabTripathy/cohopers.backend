@@ -25,18 +25,18 @@ const Space = sequelize.define('Space', {
   },
   finalPrice: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
+    allowNull: true
   },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
   availability: {
-    type: DataTypes.ENUM('AVAILABLE', 'AVAILABLE_SOON', 'NOT_AVAILABLE'),
-    defaultValue: 'AVAILABLE'
+    type: DataTypes.ENUM('Available', 'Available Soon', 'Not Available'),
+    allowNull:false
   },
   images: {
-    type: DataTypes.JSON, // multiple images
+    type: DataTypes.JSON, 
     allowNull: false
   },
   createdAt: {

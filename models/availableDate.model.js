@@ -9,7 +9,7 @@ const AvailableDate = sequelize.define('AvailableDate', {
     autoIncrement: true
   },
   date: {
-    type: DataTypes.DATEONLY,
+    type: DataTypes.JSON,
     allowNull: false
   },
   spaceId: {
@@ -31,7 +31,7 @@ const AvailableDate = sequelize.define('AvailableDate', {
 });
 
 // Define relationship
-Space.hasMany(AvailableDate, { foreignKey: 'spaceId' });
-AvailableDate.belongsTo(Space, { foreignKey: 'spaceId' });
+Space.hasMany(AvailableDate, {as: "availableDates", foreignKey: 'spaceId' });
+AvailableDate.belongsTo(Space, { as: "space",foreignKey: 'spaceId' });
 
 module.exports = AvailableDate;

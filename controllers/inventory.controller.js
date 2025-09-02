@@ -8,64 +8,79 @@ const inventoryController = {};
 // Middleware for handling space image uploads
 inventoryController.uploadSpaceImages = upload.array('spaceImages', 5);
 
+
 // Add new space
 inventoryController.addSpace = async (req, res, next) => {
   try {
-    // Validate required fields
-    const { roomNumber, cabinNumber, price, availability, availableDates } = req.body;
-    
-    if (!roomNumber || !cabinNumber || !price) {
+    const { space_name, seater, price, availability, availableDates } = req.body;
+
+    if (!space_name || !price) {
       return res.status(400).json({
         success: false,
-        message: 'Room number, cabin number, and price are required'
+        message: 'Space name and price are required'
       });
     }
-    
-    // Check if at least one image was uploaded
+
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'At least one space image is required'
       });
     }
-    
-    // Process uploaded images
+
     const imagePaths = req.files.map(file => `/uploads/spaces/${file.filename}`);
-    
-    // Create space record
+
+    // Price with GST
+    const gstRate = 0.18;
+    const finalPrice = parseFloat(price) + (parseFloat(price) * gstRate);
+
+    // Validate availability
+    const validStatuses = ["Available", "Available Soon", "Not Available"];
+    const finalAvailability = validStatuses.includes(availability) ? availability : "Available";
+
+    // Create Space
     const newSpace = await Space.create({
-      roomNumber,
-      cabinNumber,
-      price,
-      availability: availability || 'AVAILABLE',
+      space_name,
+      seater: seater ? parseInt(seater) : null,
+      price: parseFloat(price),
+      gst: 18.00,
+      finalPrice: finalPrice.toFixed(2),
+      availability: finalAvailability,
       images: imagePaths
     });
-    
-    // Process available dates if provided
-    if (availableDates && Array.isArray(JSON.parse(availableDates))) {
-      const dates = JSON.parse(availableDates);
-      const availableDateRecords = dates.map(date => ({
-        date: new Date(date),
-        spaceId: newSpace.id
-      }));
-      
-      await AvailableDate.bulkCreate(availableDateRecords);
+
+    // Handle available dates
+    let parsedDates = [];
+    if (availableDates) {
+      if (typeof availableDates === "string") {
+        parsedDates = availableDates.split(",").map(d => d.trim());
+      } else if (Array.isArray(availableDates)) {
+        parsedDates = availableDates;
+      }
     }
-    
-    // Fetch the created space with its available dates
-    const space = await Space.findByPk(newSpace.id, {
-      include: [{ model: AvailableDate }]
-    });
-    
+
+    if (parsedDates.length > 0) {
+      const dateRecords = parsedDates.map(date => ({
+        spaceId: newSpace.id,
+        date
+      }));
+      await AvailableDate.bulkCreate(dateRecords);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Space added successfully',
-      data: space
+      message: 'Space added successfully with GST and available dates',
+      data: await Space.findByPk(newSpace.id, {
+        include: [{ model: AvailableDate, as: "availableDates" }]
+      })
     });
+
   } catch (error) {
+    console.error(error);
     next(error);
   }
 };
+
 
 // Get all spaces
 inventoryController.getAllSpaces = async (req, res, next) => {
