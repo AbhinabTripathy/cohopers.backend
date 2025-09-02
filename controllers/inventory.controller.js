@@ -86,7 +86,7 @@ inventoryController.addSpace = async (req, res, next) => {
 inventoryController.getAllSpaces = async (req, res, next) => {
   try {
     const spaces = await Space.findAll({
-      include: [{ model: AvailableDate }],
+      include: [{ model: AvailableDate ,as:"availableDates" }],
       order: [['createdAt', 'DESC']]
     });
     
