@@ -38,15 +38,11 @@ const Booking = sequelize.define ("Booking",{
     paymentScreenshot:{
         type:DataTypes.STRING
     },
-},{
+},
+{
     tableName:"bookings",
     timestamps:true
 });
 
-Booking.associate = (models) => {
-    Booking.belongsTo(models.User, { foreignKey: "userId" });
-    Booking.belongsTo(models.Space, { foreignKey: "spaceId" });
-    Booking.hasOne(models.KYC, { foreignKey: "bookingId" });
-  };
 
   module.exports = Booking;

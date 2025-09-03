@@ -47,6 +47,10 @@ const Space = sequelize.define('Space', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   }
+},
+{
+   tableName: "spaces", 
+   timestamps: true
 });
 
 module.exports = Space;

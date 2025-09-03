@@ -43,14 +43,12 @@ const Kyc = sequelize.define('Kyc',{
   directorIdFront: DataTypes.STRING,
   directorIdBack: DataTypes.STRING,
   directorPaymentProof: DataTypes.STRING,
-},{
+},
+{
 
    tableName:"kyc_details",
    timestamps:true
 });
 
-Kyc.associate = (models) => {
-    Kyc.belongsTo(models.Booking, { foreignKey: "bookingId" });
-  };
 
 module.exports = Kyc;

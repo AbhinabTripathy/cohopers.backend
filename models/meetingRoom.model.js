@@ -53,17 +53,9 @@ const MeetingRoom = sequelize.define(
     },
   },
   {
-    timestamps: true,
-  }
-);
-
-sequelize
-  .sync({ alter: false })
-  .then(() => {
-    console.log("MeetingRoom table created successfully!");
-  })
-  .catch((error) => {
-    console.error("Unable to create table: ", error);
+   tableName: "meeting_rooms", 
+   timestamps: true  
   });
+
 
 module.exports = MeetingRoom;

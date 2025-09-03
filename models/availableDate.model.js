@@ -28,10 +28,11 @@ const AvailableDate = sequelize.define('AvailableDate', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   }
+},
+{
+   tableName: "available_dates", 
+   timestamps: true
 });
 
-// Define relationship
-Space.hasMany(AvailableDate, {as: "availableDates", foreignKey: 'spaceId' });
-AvailableDate.belongsTo(Space, { as: "space",foreignKey: 'spaceId' });
 
 module.exports = AvailableDate;
