@@ -106,7 +106,7 @@ inventoryController.getSpaceById = async (req, res, next) => {
     const { id } = req.params;
     
     const space = await Space.findByPk(id, {
-      include: [{ model: AvailableDate }]
+      include: [{ model: AvailableDate ,as:"availableDates"}]
     });
     
     if (!space) {
@@ -183,7 +183,7 @@ inventoryController.updateSpace = async (req, res, next) => {
     
     // Fetch updated space with available dates
     const updatedSpace = await Space.findByPk(id, {
-      include: [{ model: AvailableDate }]
+      include: [{ model: AvailableDate ,as:"availableDates" }]
     });
     
     res.status(200).json({
