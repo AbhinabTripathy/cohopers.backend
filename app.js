@@ -4,6 +4,8 @@ const sequelize = require("./config/db");
 const responseMessages = require("./middlewares/response.middleware");
 const handleNotFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/errorHandler.middleware");
+const seedMeetingRooms = require('./seeders/meetingRoom.seeder');
+
 require("./models");
 const cors =require("cors");
 
@@ -29,12 +31,14 @@ const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");
 const inventoryRoutes = require("./routes/inventory.routes");
 const bookingRoutes = require("./routes/booking.routes");
+const meetingRoomRoutes = require("./routes/meetingRoom.routes")
 
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/inventory",inventoryRoutes);
 app.use("/api/booking",bookingRoutes);
+app.use("/api/meetingRoom",meetingRoomRoutes)
 
 //middlewares
 app.use(handleNotFound);
@@ -42,12 +46,19 @@ app.use(errorHandler);
 
 async function startServer() {
   try {
+    // First, authenticate the database connection
     await sequelize.authenticate();
     console.log("Database connection establish successfully");
 
     //for any schema changes
     await sequelize.sync({ alter: true });
+    console.log('All models were synchronized successfully.');
 
+    // Now run the seeders after tables are created
+    console.log('Starting to seed meeting rooms...');
+    await seedMeetingRooms();
+    console.log('Finished seeding meeting rooms.');
+    
     app.listen(port, () => {
       console.log(`Server running at :${baseUrl}`);
     });
