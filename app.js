@@ -38,7 +38,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/inventory",inventoryRoutes);
 app.use("/api/booking",bookingRoutes);
-app.use("/api/meetingRoom",meetingRoomRoutes)
+app.use("/api/meetingrooms",meetingRoomRoutes)
 
 //middlewares
 app.use(handleNotFound);
