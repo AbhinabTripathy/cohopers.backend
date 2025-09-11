@@ -203,13 +203,13 @@ const generateTimeSlots = (openTime, closeTime, durationMinutes) => {
 // Get available time slots for a specific date
 meetingRoomController.getAvailableTimeSlots = async (req, res) => {
   try {
-    const { date, capacityType, duration = "30 Minutes" } = req.query;
+    const { date, capacityType, memberType } = req.query;
 
-    if (!date || !capacityType) {
+    if (!date || !capacityType || !memberType) {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Date and capacity type are required"
+        "Date,Capacity & Member type are required"
       );
     }
 
@@ -245,7 +245,9 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
     
     // Duration in minutes - support both 30 min and 1 hour
     let durationMinutes = 30;
-    if (duration === "1 Hour") durationMinutes = 60;
+    if (memberType.toLowerCase() === "non-member") {
+      durationMinutes = 60;
+    } 
     
     const allTimeSlots = generateTimeSlots(openHour, closeHour, durationMinutes);
     
@@ -269,7 +271,8 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
         bookedSlots,
         openTime,
         closeTime,
-        duration
+        slotDuration:`${durationMinutes} Minutes`,
+        memberType
       }
     );
   } catch (error) {
