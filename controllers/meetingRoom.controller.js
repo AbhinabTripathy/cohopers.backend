@@ -236,8 +236,8 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
     });
 
     // Generate all possible time slots based on duration
-    const openTime = room.openTime || "09:00 AM";
-    const closeTime = room.closeTime || "06:30 PM";
+    let openTime = room.openTime || "09:00 AM";
+    let closeTime = room.closeTime || "06:30 PM";
     
     // Convert to 24-hour format for easier calculation
     const openHour = convertTo24Hour(openTime);
@@ -247,6 +247,9 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
     let durationMinutes = 30;
     if (memberType.toLowerCase() === "non-member") {
       durationMinutes = 60;
+      if(closeTime ==="06:30 PM"){
+        closeTime = "06:00 PM";
+      }
     } 
     
     const allTimeSlots = generateTimeSlots(openHour, closeHour, durationMinutes);
@@ -306,24 +309,41 @@ meetingRoomController.getAmenities = async (req, res) => {
   }
 };
 
-// Book a meeting room
+// Book a meeting room & upload payment screenshot
 meetingRoomController.bookRoom = async (req, res) => {
   try {
-    const { 
-      capacityType,
-      bookingDate,
-      timeSlots,
-      duration,
-      bookingType,
-      memberType,
-      notes 
-    } = req.body;
-
+    const { capacityType, bookingDate, timeSlots:timeSlotString, duration, bookingType, memberType, notes } = req.body;
+    // Parse timeSlots from string to array if it's not already an array
+    let timeSlots = timeSlotString;
+    if (timeSlotString && typeof timeSlotString === 'string') {
+      try {
+        timeSlots = JSON.parse(timeSlotString);
+      } catch (e) {
+        // If it's a comma-separated string, convert to array
+        timeSlots = timeSlotString.split(',').map(slot => slot.trim());
+      }
+    }
+    
+    // Ensure timeSlots is an array
+    if (timeSlots && !Array.isArray(timeSlots)) {
+      timeSlots = [timeSlots];
+    }
+    
     // Get customer information from authenticated user
     const userName = req.user.username;
     const userEmail = req.user.email;
     const userPhone = req.user.mobile;
-
+    
+    // Check for payment screenshot
+    if (!req.file) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "Payment screenshot is required"
+      );
+    }
+    
+    // Rest of your validation code...
     if (!capacityType || !bookingDate || !bookingType || !memberType) {
       return res.error(
         httpStatus.BAD_REQUEST,
@@ -331,7 +351,7 @@ meetingRoomController.bookRoom = async (req, res) => {
         "Required fields are missing"
       );
     }
-
+    
     // Validate duration if provided for hourly bookings
     if (bookingType === "Hourly" && (!duration || !["30 Minutes", "1 Hour"].includes(duration))) {
       return res.error(
@@ -340,7 +360,7 @@ meetingRoomController.bookRoom = async (req, res) => {
         "Duration must be either '30 Minutes' or '1 Hour' for hourly bookings"
       );
     }
-
+    
     // Find room by capacity type
     const room = await MeetingRoom.findOne({
       where: { capacityType }
@@ -353,7 +373,7 @@ meetingRoomController.bookRoom = async (req, res) => {
         "Meeting room not found"
       );
     }
-
+    
     // Calculate price based on booking type and member type
     let basePrice;
     if (bookingType === "Hourly") {
@@ -361,24 +381,22 @@ meetingRoomController.bookRoom = async (req, res) => {
     } else {
       basePrice = memberType === "Member" ? room.memberDayRate : room.dayRate;
     }
-
+    
     // Calculate total amount
     let totalAmount;
     if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
       // For hourly bookings, calculate based on number of slots and duration
       const hourMultiplier = duration === "1 Hour" ? 1 : 0.5; // 30 min = 0.5 hour
       const totalHours = timeSlots.length * hourMultiplier;
-      
       // Base price is per hour
       const subtotal = basePrice * totalHours;
-      
       // Add GST (18%) for hourly bookings
       totalAmount = subtotal * 1.18;
     } else {
       // For whole day bookings, GST is already included
       totalAmount = basePrice;
     }
-
+    
     // Check for availability if hourly booking
     if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
       const existingBookings = await RoomBooking.findAll({
@@ -388,7 +406,7 @@ meetingRoomController.bookRoom = async (req, res) => {
           status: "confirmed"
         }
       });
-
+      
       // Check for time slot conflicts
       const bookedSlots = [];
       existingBookings.forEach(booking => {
@@ -396,7 +414,7 @@ meetingRoomController.bookRoom = async (req, res) => {
           bookedSlots.push(...booking.timeSlots);
         }
       });
-
+      
       // Check if any requested slot is already booked
       const conflictingSlots = timeSlots.filter(slot => bookedSlots.includes(slot));
       if (conflictingSlots.length > 0) {
@@ -407,13 +425,16 @@ meetingRoomController.bookRoom = async (req, res) => {
         );
       }
     }
-
+    
+    // Get the payment screenshot path from the uploaded file
+    const paymentScreenshotPath = `/uploads/spaces/${req.file.filename}`;
+    
     // Create booking with pending status
     const booking = await RoomBooking.create({
       roomId: room.id,
-      username:userName,
-      email:userEmail,
-      mobile:userPhone,
+      username: userName,
+      email: userEmail,
+      mobile: userPhone,
       bookingDate,
       timeSlots: bookingType === "Hourly" ? timeSlots : null,
       duration: bookingType === "Hourly" ? duration : null,
@@ -421,9 +442,10 @@ meetingRoomController.bookRoom = async (req, res) => {
       memberType,
       totalAmount: parseFloat(totalAmount.toFixed(2)),
       status: "pending", // Set to pending until admin verifies
-      notes
+      notes,
+      paymentScreenshot: paymentScreenshotPath // Save the payment screenshot path
     });
-
+    
     return res.success(
       httpStatus.CREATED,
       true,
@@ -433,7 +455,7 @@ meetingRoomController.bookRoom = async (req, res) => {
         roomName: room.name,
         roomType: room.capacityType,
         totalAmount: booking.totalAmount,
-        paymentInstructions: "Please complete your payment to confirm your booking."
+        paymentScreenshot: booking.paymentScreenshot
       }
     );
   } catch (error) {
@@ -446,7 +468,6 @@ meetingRoomController.bookRoom = async (req, res) => {
     );
   }
 };
-
 //  for admin to verify bookings
 meetingRoomController.verifyBooking = async (req, res) => {
   try {

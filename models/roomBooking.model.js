@@ -3,7 +3,7 @@ const sequelize = require("../config/db");
 const MeetingRoom = require("./meetingRoom.model");
 
 const RoomBooking = sequelize.define(
-  "RoomBooking",
+  "meetingRoomBooking",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -63,6 +63,10 @@ const RoomBooking = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    paymentScreenshot: {
+      type:DataTypes.STRING,
+      allowNull:false
+    }
   },
   {
     timestamps: true,
@@ -73,13 +77,6 @@ const RoomBooking = sequelize.define(
 MeetingRoom.hasMany(RoomBooking, { foreignKey: "roomId" });
 RoomBooking.belongsTo(MeetingRoom, { foreignKey: "roomId" });
 
-sequelize
-  .sync({ alter: false })
-  .then(() => {
-    console.log("RoomBooking table created successfully!");
-  })
-  .catch((error) => {
-    console.error("Unable to create table: ", error);
-  });
+
 
 module.exports = RoomBooking;

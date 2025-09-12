@@ -1,6 +1,7 @@
 const express = require("express");
 const meetingRoomController = require("../controllers/meetingRoom.controller");
 const authMiddleware = require("../middlewares/authUserMiddleware");
+const fileUpload = require("../middlewares/upload.middleware");
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.get("/available-slots", meetingRoomController.getAvailableTimeSlots);
 router.get("/amenities", meetingRoomController.getAmenities);
 
 // Protected routes that require authentication
-router.post("/book", authMiddleware, meetingRoomController.bookRoom);
+router.post("/book", authMiddleware,  fileUpload.single("paymentScreenshot"), meetingRoomController.bookRoom);
 router.put("/verify-booking/:bookingId", meetingRoomController.verifyBooking);
 
 module.exports = router;
