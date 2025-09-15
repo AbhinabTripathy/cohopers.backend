@@ -31,14 +31,14 @@ const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");
 const inventoryRoutes = require("./routes/inventory.routes");
 const bookingRoutes = require("./routes/booking.routes");
-const meetingRoomRoutes = require("./routes/meetingRoom.routes")
+const meetingRoomRoutes = require("./routes/meetingRoom.routes");
 
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/inventory",inventoryRoutes);
 app.use("/api/booking",bookingRoutes);
-app.use("/api/meetingrooms",meetingRoomRoutes)
+app.use("/api/meetingrooms",meetingRoomRoutes);
 
 //middlewares
 app.use(handleNotFound);
@@ -51,7 +51,7 @@ async function startServer() {
     console.log("Database connection establish successfully");
 
     //for any schema changes
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: false });
     console.log('All models were synchronized successfully.');
 
     // Now run the seeders after tables are created

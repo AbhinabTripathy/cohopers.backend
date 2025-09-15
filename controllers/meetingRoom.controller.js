@@ -296,7 +296,7 @@ meetingRoomController.getAmenities = async (req, res) => {
       httpStatus.OK,
       true,
       "Amenities fetched successfully",
-      ["Tea", "Coffee", "Cookies"]
+      ["Tea", "Coffee",]
     );
   } catch (error) {
     console.error("Error fetching amenities:", error);
