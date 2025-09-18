@@ -114,6 +114,7 @@ meetingRoomController.getRoomPricing = async (req, res) => {
       "Room pricing fetched successfully",
       {
         price,
+        pricePerThirtyMin: memberType === "Member" ? price / 2 : null, // Only for members
         openTime: room.openTime,
         closeTime: room.closeTime,
         bookingType,
@@ -377,9 +378,9 @@ meetingRoomController.bookRoom = async (req, res) => {
     // Calculate price based on booking type and member type
     let basePrice;
     if (bookingType === "Hourly") {
-      basePrice = memberType === "Member" ? room.memberHourlyRate : room.hourlyRate;
+      basePrice = parseInt(memberType === "Member" ? room.memberHourlyRate : room.hourlyRate);
     } else {
-      basePrice = memberType === "Member" ? room.memberDayRate : room.dayRate;
+      basePrice = parseInt(memberType === "Member" ? room.memberDayRate : room.dayRate);
     }
     
     // Calculate total amount
@@ -390,7 +391,7 @@ meetingRoomController.bookRoom = async (req, res) => {
       const totalHours = timeSlots.length * hourMultiplier;
       // Base price is per hour
       const subtotal = basePrice * totalHours;
-      // Add GST (18%) for hourly bookings
+      //GST 18% for hourly bookings
       totalAmount = subtotal * 1.18;
     } else {
       // For whole day bookings, GST is already included
@@ -441,9 +442,9 @@ meetingRoomController.bookRoom = async (req, res) => {
       bookingType,
       memberType,
       totalAmount: parseFloat(totalAmount.toFixed(2)),
-      status: "pending", // Set to pending until admin verifies
+      status: "pending", // pending until admin verifies
       notes,
-      paymentScreenshot: paymentScreenshotPath // Save the payment screenshot path
+      paymentScreenshot: paymentScreenshotPath // save the payment screenshot path
     });
     
     return res.success(
@@ -468,51 +469,62 @@ meetingRoomController.bookRoom = async (req, res) => {
     );
   }
 };
-//  for admin to verify bookings
-meetingRoomController.verifyBooking = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    
-    if (!bookingId) {
-      return res.error(
-        httpStatus.BAD_REQUEST,
-        false,
-        "Booking ID is required"
-      );
-    }
-    
-    // Find the booking
-    const booking = await RoomBooking.findByPk(bookingId);
-    
-    if (!booking) {
-      return res.error(
-        httpStatus.NOT_FOUND,
-        false,
-        "Booking not found"
-      );
-    }
-    
-    // Update booking status to confirmed
-    await booking.update({ status: "confirmed" });
-    
-    // Get room details
-    const room = await MeetingRoom.findByPk(booking.roomId);
-    
-    return res.success(
-      httpStatus.OK,
-      true,
-      "Booking verified successfully",
-      booking
-    );
-  } catch (error) {
-    console.error("Error verifying booking:", error);
-    return res.error(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      false,
-      "Internal server error",
-      error
-    );
-  }
-};
+//  for admin to verify bookings 
+ meetingRoomController.verifyBooking = async (req, res) => { 
+   try { 
+     const { bookingId } = req.params; 
+     const { status } = req.body; 
+     
+     if (!bookingId) { 
+       return res.error( 
+         httpStatus.BAD_REQUEST, 
+         false, 
+         "Booking ID is required" 
+       ); 
+     } 
+     
+     if (!status || !['confirmed', 'cancel'].includes(status)) {
+       return res.error(
+         httpStatus.BAD_REQUEST,
+         false,
+         "Status must be either 'confirmed' or 'cancel'"
+       );
+     }
+     
+     // Find the booking 
+     const booking = await RoomBooking.findByPk(bookingId); 
+     
+     if (!booking) { 
+       return res.error( 
+         httpStatus.NOT_FOUND, 
+         false, 
+         "Booking not found" 
+       ); 
+     } 
+     
+     // Update booking status based on request body
+     await booking.update({ status }); 
+     
+     // Get room details 
+     const room = await MeetingRoom.findByPk(booking.roomId); 
+     
+     const message = status === 'confirmed' ? "Booking confirmed successfully" : "Booking cancelled successfully";
+     
+     return res.success( 
+       httpStatus.OK, 
+       true, 
+       message, 
+       booking 
+     ); 
+   } catch (error) { 
+     console.error("Error verifying booking:", error); 
+     return res.error( 
+       httpStatus.INTERNAL_SERVER_ERROR, 
+       false, 
+       "Internal server error", 
+       error 
+     ); 
+   } 
+ };
 
 module.exports = meetingRoomController;

@@ -14,9 +14,9 @@ async function seedMeetingRooms() {
     await MeetingRoom.create({
       name: "Small Conference Room",
       capacityType: "4-6 Seater",
-      hourlyRate: 500, // Non-member hourly rate
+      hourlyRate: 250, // Non-member hourly rate
       dayRate: 2300,   // Non-member whole day rate (Including GST)
-      memberHourlyRate: 400, // Member hourly rate
+      memberHourlyRate: 200, // Member hourly rate (100 per 30 min)
       memberDayRate: 1800,   // Member whole day rate (Including GST)
       description: "Small conference room for team meetings",
       openTime: "09:00 AM",
@@ -29,7 +29,7 @@ async function seedMeetingRooms() {
       capacityType: "10-12 Seater",
       hourlyRate: 500, // Non-member hourly rate
       dayRate: 2300,   // Non-member whole day rate (Including GST)
-      memberHourlyRate: 400, // Member hourly rate
+      memberHourlyRate: 400, // Member hourly rate (200 per 30 min)
       memberDayRate: 1800,   // Member whole day rate (Including GST)
       description: "Large conference room for board meetings",
       openTime: "09:00 AM",
