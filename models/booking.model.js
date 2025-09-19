@@ -20,11 +20,11 @@ const Booking = sequelize.define ("Booking",{
         allowNull:false,
     },
     startDate:{
-        type:DataTypes.TIME,
+        type:DataTypes.DATEONLY,
         allowNull:false
     },
     endDate:{
-        type:DataTypes.TIME,
+        type:DataTypes.DATEONLY,
         allowNull:false,
     },
     amount:{

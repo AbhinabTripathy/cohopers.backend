@@ -9,6 +9,7 @@ const bookingController = {} ;
 bookingController.createBooking = async (req, res) => {
   try {
     const { spaceId, date, startDate, endDate, amount } = req.body;
+    
     const booking = await Booking.create({
       userId: req.user.id,
       spaceId,
@@ -18,6 +19,7 @@ bookingController.createBooking = async (req, res) => {
       amount,
       status: "Pending"
     });
+    
     res.status(201).json({ message: "Booking created successfully", booking });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -32,6 +32,6 @@ router.post(
 );
 
 //  Get booking details with KYC
-router.get("space/:id", bookingController.getBookingDetails);
+router.get("/spaces/:id", bookingController.getBookingDetails);
 
 module.exports = router;

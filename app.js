@@ -4,7 +4,7 @@ const sequelize = require("./config/db");
 const responseMessages = require("./middlewares/response.middleware");
 const handleNotFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/errorHandler.middleware");
-const seedMeetingRooms = require('./seeders/meetingRoom.Seeder');
+const seedMeetingRooms = require('./seeders/meetingRoom.seeder');
 
 require("./models");
 const cors =require("cors");
@@ -29,14 +29,14 @@ app.use(responseMessages);
 
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");
-const inventoryRoutes = require("./routes/inventory.routes");
+const spaceRoutes = require("./routes/inventory.routes");
 const bookingRoutes = require("./routes/booking.routes");
 const meetingRoomRoutes = require("./routes/meetingRoom.routes");
 
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api/inventory",inventoryRoutes);
+app.use("/api/spaces",spaceRoutes);
 app.use("/api/booking",bookingRoutes);
 app.use("/api/meetingrooms",meetingRoomRoutes);
 

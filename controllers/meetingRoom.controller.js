@@ -210,83 +210,74 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Date,Capacity & Member type are required"
+        "Date, Capacity & Member type are required"
       );
     }
 
     // Find room by capacity type
-    const room = await MeetingRoom.findOne({
-      where: { capacityType }
-    });
-    
+    const room = await MeetingRoom.findOne({ where: { capacityType } });
     if (!room) {
-      return res.error(
-        httpStatus.NOT_FOUND,
-        false,
-        "Meeting room not found"
-      );
+      return res.error(httpStatus.NOT_FOUND, false, "Meeting room not found");
     }
 
-    // Find existing bookings for the date
+    // Include both 'pending' and 'confirmed' so slots are blocked once a user books & uploads payment.
+    // If you don't want to block on pending, change this array to ['confirmed'] only.
+    const bookedStatuses = ['pending', 'confirmed'];
+
     const existingBookings = await RoomBooking.findAll({
       where: {
         roomId: room.id,
         bookingDate: date,
-        status: "confirmed"
+        status: { [Op.in]: bookedStatuses }
       }
     });
 
-    // Generate all possible time slots based on duration
+    // Generate all possible time slots (assumes generateTimeSlots returns strings like "09:00 - 09:30")
     let openTime = room.openTime || "09:00 AM";
     let closeTime = room.closeTime || "06:30 PM";
-    
-    // Convert to 24-hour format for easier calculation
+
+    // If non-member must see 1-hour slots adjust duration and (optionally) closeTime
+    let durationMinutes = 30;
+    if (String(memberType).toLowerCase().includes('non')) {
+      durationMinutes = 60;
+      // If you want non-members to see closeTime as 06:00 rather than 06:30:
+      if (closeTime === "06:30 PM") closeTime = "06:00 PM";
+    }
+
     const openHour = convertTo24Hour(openTime);
     const closeHour = convertTo24Hour(closeTime);
-    
-    // Duration in minutes - support both 30 min and 1 hour
-    let durationMinutes = 30;
-    if (memberType.toLowerCase() === "non-member") {
-      durationMinutes = 60;
-      if(closeTime ==="06:30 PM"){
-        closeTime = "06:00 PM";
-      }
-    } 
-    
     const allTimeSlots = generateTimeSlots(openHour, closeHour, durationMinutes);
-    
-    // Mark booked slots
-    const bookedSlots = [];
-    existingBookings.forEach(booking => {
-      if (booking.timeSlots && Array.isArray(booking.timeSlots)) {
-        bookedSlots.push(...booking.timeSlots);
-      }
-    });
-    
-    // Filter out booked slots
-    const availableSlots = allTimeSlots.filter(slot => !bookedSlots.includes(slot));
+
+    // Collect booked slots from DB
+    const bookedSlotsRaw = existingBookings.flatMap(b => b.timeSlots || []);
+
+    // Normalization helper: remove spaces so "09:00 - 10:00" and "09:00-10:00" compare equal
+    const normalize = s => (s || '').toString().replace(/\s+/g, '');
+
+    const bookedSet = new Set(bookedSlotsRaw.map(normalize));
+
+    // Filter out booked slots using normalized comparison
+    const availableSlots = allTimeSlots.filter(slot => !bookedSet.has(normalize(slot)));
 
     return res.success(
       httpStatus.OK,
       true,
       "Available time slots fetched successfully",
-      { 
+      {
         availableSlots,
-        bookedSlots,
+        bookedSlots: [...bookedSet].map(s => {
+          // convert back to readable format (insert space around dash) if you want
+          return s.replace('-', ' - ');
+        }),
         openTime,
         closeTime,
-        slotDuration:`${durationMinutes} Minutes`,
+        slotDuration: `${durationMinutes} Minutes`,
         memberType
       }
     );
   } catch (error) {
     console.error("Error fetching available time slots:", error);
-    return res.error(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      false,
-      "Internal server error",
-      error
-    );
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Internal server error", error);
   }
 };
 
