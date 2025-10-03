@@ -231,4 +231,195 @@ adminController.verifySpaceBooking = async (req, res) => {
     });
   }
 };
+
+//fetch all dashboard data
+adminController.getDashboardData = async (req, res) => {
+  try {
+    const { Op } = require('sequelize'); 
+    
+    // Get total users (excluding admin if needed)
+    const totalUsers = await User.count();
+    
+    // Get total space bookings
+    const totalSpaceBookings = await Booking.count();
+    
+    // Get total meeting room bookings
+    const totalMeetingRoomBookings = await roomBooking.count();
+    
+    // Get total earnings from space bookings
+    const spaceEarnings = await Booking.sum('amount', {
+      where: {
+        status: 'Confirm' // Only count confirmed bookings
+      }
+    }) || 0;
+    
+    // Get total earnings from meeting room bookings
+    const meetingRoomEarnings = await roomBooking.sum('totalAmount') || 0;
+    
+    // Get total spaces
+    const totalSpaces = await Space.count();
+    
+    // Get total meeting rooms
+    const totalMeetingRooms = await MeetingRoom.count();
+    
+    // Get recent bookings (both space and meeting room)
+    const recentSpaceBookings = await Booking.findAll({
+      limit: 5,
+      order: [['createdAt', 'DESC']],
+      include: [
+        { model: User, as: 'user', attributes: ['username', 'email'] },
+        { model: Space, as: 'space', attributes: ['space_name'] }
+      ]
+    });
+    
+    const recentMeetingRoomBookings = await roomBooking.findAll({
+      limit: 5,
+      order: [['createdAt', 'DESC']],
+      include: [
+        { model: MeetingRoom, attributes: ['name'] }
+      ]
+    });
+    
+    // Calculate monthly earnings (current month)
+    const currentDate = new Date();
+    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    
+    const monthlySpaceEarnings = await Booking.sum('amount', {
+      where: {
+        status: 'Confirm',
+        createdAt: {
+          [Op.between]: [firstDayOfMonth, lastDayOfMonth]
+        }
+      }
+    }) || 0;
+    
+    const monthlyMeetingRoomEarnings = await roomBooking.sum('totalAmount', {
+      where: {
+        createdAt: {
+          [Op.between]: [firstDayOfMonth, lastDayOfMonth]
+        }
+      }
+    }) || 0;
+    
+    // Get pending bookings count
+    const pendingSpaceBookings = await Booking.count({
+      where: {
+        status: 'Pending'
+      }
+    });
+    
+    const pendingMeetingRoomBookings = await roomBooking.count({
+      where: {
+        status: 'pending'
+      }
+    });
+    
+    // Return dashboard data
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      data: {
+        totalUsers,
+        totalSpaceBookings,
+        totalMeetingRoomBookings,
+        totalEarnings: spaceEarnings + meetingRoomEarnings,
+        monthlyEarnings: monthlySpaceEarnings + monthlyMeetingRoomEarnings,
+        totalSpaces,
+        totalMeetingRooms,
+        pendingBookings: pendingSpaceBookings + pendingMeetingRoomBookings,
+        recentSpaceBookings,
+        recentMeetingRoomBookings,
+        bookingStats: {
+          spaceBookings: totalSpaceBookings,
+          meetingRoomBookings: totalMeetingRoomBookings
+        },
+        earningsStats: {
+          spaceEarnings,
+          meetingRoomEarnings,
+          totalEarnings: spaceEarnings + meetingRoomEarnings
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to retrieve dashboard data',
+      error: error.message
+    });
+  }
+};
+
+// Get all active members
+adminController.getAllActiveMembers = async (req, res) => {
+  try {
+    // Find all confirmed bookings with their associated user and space
+    const activeBookings = await Booking.findAll({
+      where: {
+        status: 'Confirm' // Only get confirmed/active bookings
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email', 'mobile']
+        },
+        {
+          model: Space,
+          as: 'space',
+          attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
+        },
+        {
+          model: Kyc,
+          attributes: ['id', 'documentType', 'documentNumber', 'documentImage']
+        }
+      ],
+      order: [['id', 'ASC']]
+    });
+
+    // Format the data to match the table structure in the screenshot
+    const formattedMembers = activeBookings.map(booking => {
+      return {
+        id: booking.id,
+        name: booking.user.username,
+        mobile: booking.user.mobile,
+        address: "Lorem ipsum elit. Nulla...", // You can replace with actual address if available
+        spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk',
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        unit: booking.space.seater || 605, // Default to 605 if not available
+        amount: booking.amount,
+        email: booking.user.email,
+        details: {
+          id: booking.id,
+          userId: booking.userId,
+          spaceId: booking.spaceId,
+          bookingDate: booking.date,
+          startDate: booking.startDate,
+          endDate: booking.endDate,
+          amount: booking.amount,
+          status: booking.status
+        },
+        kycDetails: booking.Kyc ? {
+          id: booking.Kyc.id,
+          documentType: booking.Kyc.documentType,
+          documentNumber: booking.Kyc.documentNumber,
+          documentImage: booking.Kyc.documentImage
+        } : null
+      };
+    });
+
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      data: formattedMembers
+    });
+  } catch (error) {
+    console.error('Error fetching active members:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to retrieve active members',
+      error: error.message
+    });
+  }
+};
 module.exports = adminController;

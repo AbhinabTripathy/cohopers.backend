@@ -12,5 +12,9 @@ router.get('/space-bookings', adminAuthMiddleware, adminController.getAllSpaceBo
 // Verify space booking
 router.put('/space-bookings/:id/verify', adminAuthMiddleware, adminController.verifySpaceBooking);
 
+// Dashboard data
+router.get('/dashboard-data', adminAuthMiddleware, adminController.getDashboardData);
+// Add this line to your existing routes
+router.get('/active-members', adminController.getAllActiveMembers);
 
 module.exports = router;
