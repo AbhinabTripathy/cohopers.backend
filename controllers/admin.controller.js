@@ -66,8 +66,8 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
     const formattedBookings = bookings.map((booking, index) => {
       return {
         sl: index + 1,
-        userId: booking.User.id,
-        userName: booking.User.username,
+        userId: booking.user.id,
+        userName: booking.user.username,
         bookingType: booking.bookingType, // Hourly / WholeDay
         memberType: booking.memberType,
         date: booking.bookingDate,
@@ -76,7 +76,7 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
           booking.bookingType === "Hourly"
             ? booking.timeSlots?.join(", ")
             : "Full Day",
-        paymentEmail: booking.User.email,
+        paymentEmail: booking.user.email,
         status: booking.status,
         id: booking.id
       };

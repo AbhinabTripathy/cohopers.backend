@@ -241,8 +241,18 @@ inventoryController.addTeamMember = async (req, res) => {
   try {
     const { fullName, email, phone, role, deskNumber } = req.body;
 
-    // Ensure user is logged in
+    // Ensure user is logged in and available in req.user
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication failed - user not found in request"
+      });
+    }
+
     const userId = req.user.id;
+    
+    // Log the user ID to help with debugging
+    console.log("User ID from token:", userId);
 
     // Find the user's active monthly space booking
     const booking = await Booking.findOne({
@@ -288,7 +298,6 @@ inventoryController.addTeamMember = async (req, res) => {
     });
   }
 };
-
 
 
 

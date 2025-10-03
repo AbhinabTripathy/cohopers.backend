@@ -71,7 +71,7 @@ const RoomBooking = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-      model: "Users", 
+      model: "users", 
       key: "id",
   },
 },
