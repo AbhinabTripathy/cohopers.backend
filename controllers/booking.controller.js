@@ -103,7 +103,11 @@ bookingController.submitKyc = async (req, res) => {
 bookingController.getBookingDetails = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id, {
-      include: [Space, Kyc, User]
+      include: [
+  { model: Space, as: "space" },
+  { model: User, as: "user" },
+  { model: Kyc }  
+]
     });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
     res.json({ booking });

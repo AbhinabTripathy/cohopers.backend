@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { User, MeetingRoom, roomBooking, Space, Booking } = require('../models');
+const { User, MeetingRoom, roomBooking, Space, Booking, Kyc } = require('../models');
 const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
 const sendMail = require("../utils/helper")
@@ -353,10 +353,10 @@ adminController.getDashboardData = async (req, res) => {
 // Get all active members
 adminController.getAllActiveMembers = async (req, res) => {
   try {
-    // Find all confirmed bookings with their associated user and space
+    // Find all confirmed bookings with their user and space
     const activeBookings = await Booking.findAll({
       where: {
-        status: 'Confirm' // Only get confirmed/active bookings
+        status: 'Confirm' 
       },
       include: [
         {
@@ -371,23 +371,22 @@ adminController.getAllActiveMembers = async (req, res) => {
         },
         {
           model: Kyc,
-          attributes: ['id', 'documentType', 'documentNumber', 'documentImage']
+          attributes: ['id', 'type', 'name', 'email', 'mobile', 'gstNumber'] // Updated to match your model
         }
       ],
       order: [['id', 'ASC']]
     });
 
-    // Format the data to match the table structure in the screenshot
+    // Format the data 
     const formattedMembers = activeBookings.map(booking => {
       return {
         id: booking.id,
         name: booking.user.username,
-        mobile: booking.user.mobile,
-        address: "Lorem ipsum elit. Nulla...", // You can replace with actual address if available
+        mobile: booking.user.mobile, 
         spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk',
         startDate: booking.startDate,
         endDate: booking.endDate,
-        unit: booking.space.seater || 605, // Default to 605 if not available
+        unit: booking.space.seater,
         amount: booking.amount,
         email: booking.user.email,
         details: {
@@ -402,9 +401,11 @@ adminController.getAllActiveMembers = async (req, res) => {
         },
         kycDetails: booking.Kyc ? {
           id: booking.Kyc.id,
-          documentType: booking.Kyc.documentType,
-          documentNumber: booking.Kyc.documentNumber,
-          documentImage: booking.Kyc.documentImage
+          documentType: booking.Kyc.type, 
+          name: booking.Kyc.name,
+          email: booking.Kyc.email,
+          mobile: booking.Kyc.mobile,
+          gstNumber: booking.Kyc.gstNumber
         } : null
       };
     });

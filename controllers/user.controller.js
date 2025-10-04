@@ -232,7 +232,7 @@ userController.getUserBookings = async (req, res) => {
         // Find all bookings for the user
         const bookings = await Booking.findAll({
             where: { userId },
-            include: [{ model: Space }],
+            include: [{ model: Space, as:"space" }],
             order: [['createdAt', 'DESC']]
         });
         
