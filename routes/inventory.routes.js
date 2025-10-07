@@ -13,6 +13,11 @@ router.put('/spaces/:id', authMiddleware,inventoryController.uploadSpaceImages, 
 router.delete('/spaces/:id', authMiddleware,inventoryController.deleteSpace);
 //add team member for booking space
 router.post("/team-members/add",authUserMiddleware,uploadPhoto.single("photo"),inventoryController.addTeamMember);
+router.get("/team-members/booking/:bookingId", authUserMiddleware, inventoryController.getTeamMembers);
+router.put("/team-members/:id", authUserMiddleware, inventoryController.updateTeamMember);
+router.delete("/team-members/:id", authUserMiddleware, inventoryController.deleteTeamMember);
 
+// Admin routes - require admin authentication
+router.get("/team-members/all", authMiddleware, inventoryController.getAllTeamMembers);
 
 module.exports = router;

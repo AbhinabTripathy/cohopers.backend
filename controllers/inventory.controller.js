@@ -1,4 +1,4 @@
-const { Space, AvailableDate, Booking, teamMember } = require('../models');
+const { Space, AvailableDate, Booking, teamMember,  } = require('../models');
 const upload = require('../middlewares/upload.middleware');
 const path = require('path');
 const fs = require('fs');
@@ -299,6 +299,140 @@ inventoryController.addTeamMember = async (req, res) => {
   }
 };
 
+// Get all team members for a booking
+inventoryController.getTeamMembers = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    
+    // Check if booking exists and belongs to the user
+    const booking = await Booking.findOne({
+      where: { id: bookingId, userId: req.user.id }
+    });
+    
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found or you don\'t have permission'
+      });
+    }
+    
+    // Get team members
+    const teamMembers = await teamMember.findAll({
+      where: { bookingId }
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Team members retrieved successfully',
+      data: teamMembers
+    });
+  } catch (error) {
+    console.error("Error getting team members:", error);
+    next(error);
+  }
+};
+
+// Update a team member
+inventoryController.updateTeamMember = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, phoneNumber, role, deskNumber } = req.body;
+    
+    // Find team member and check if it belongs to user's booking
+    const TeamMember = await teamMember.findOne({
+      where: { id },
+      include: [{
+        model: Booking,
+        where: { userId: req.user.id }
+      }]
+    });
+    
+    if (!TeamMember) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team member not found or you don\'t have permission'
+      });
+    }
+    
+    // Update team member
+    await TeamMember.update({
+      fullName,
+      email,
+      phoneNumber,
+      role,
+      deskNumber
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Team member updated successfully',
+      data: TeamMember
+    });
+  } catch (error) {
+    console.error("Error updating team member:", error);
+    next(error);
+  }
+};
+
+// Delete a team member
+inventoryController.deleteTeamMember = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    // Find team member and check if it belongs to user's booking
+    const TeamMember = await teamMember.findOne({
+      where: { id },
+      include: [{
+        model: Booking,
+        where: { userId: req.user.id }
+      }]
+    });
+    
+    if (!TeamMember) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team member not found or you don\'t have permission'
+      });
+    }
+    
+    // delete team members
+    await TeamMember.destroy();
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Team member deleted successfully'
+    });
+  } catch (error) {
+    console.error("Error deleting team member:", error);
+    next(error);
+  }
+};
+
+
+// Admin endpoint to get all team members across all bookings
+inventoryController.getAllTeamMembers = async (req, res, next) => {
+  try {
+    const teamMembers = await teamMember.findAll({
+     
+      include: [{
+        model: Booking,
+        include: [{
+          model: Space, as:"space",
+          attributes: ['roomNumber', 'cabinNumber', 'space_name']
+        }]
+      }]
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'All team members retrieved successfully',
+      data: teamMembers
+    });
+  } catch (error) {
+    console.error("Error getting all team members:", error);
+    next(error);
+  }
+};
 
 
 module.exports = inventoryController;
