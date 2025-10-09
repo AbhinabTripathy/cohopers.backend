@@ -423,4 +423,83 @@ adminController.getAllActiveMembers = async (req, res) => {
     });
   }
 };
+// Get all past members
+adminController.getPastMembers = async (req, res) => {
+  try {
+    const { Op } = require('sequelize');
+    const currentDate = new Date();
+    
+    // Find all confirmed bookings whose end date has passed
+    const pastBookings = await Booking.findAll({
+      where: {
+        status: 'Confirm',
+        endDate: {
+          [Op.lt]: currentDate  // endDate less than current date
+        }
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email', 'mobile']
+        },
+        {
+          model: Space,
+          as: 'space',
+          attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
+        },
+        {
+          model: Kyc,
+          attributes: ['id', 'type', 'name', 'email', 'mobile', 'gstNumber']
+        }
+      ],
+      order: [['endDate', 'DESC']]  // Most recently ended first
+    });
+
+    // Format the data 
+    const formattedPastMembers = pastBookings.map(booking => {
+      return {
+        id: booking.id,
+        name: booking.user.username,
+        mobile: booking.user.mobile,
+        spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk',
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        unit: booking.space.seater,
+        amount: booking.amount,
+        email: booking.user.email,
+        details: {
+          id: booking.id,
+          userId: booking.userId,
+          spaceId: booking.spaceId,
+          bookingDate: booking.date,
+          startDate: booking.startDate,
+          endDate: booking.endDate,
+          amount: booking.amount,
+          status: booking.status
+        },
+        kycDetails: booking.Kyc ? {
+          id: booking.Kyc.id,
+          documentType: booking.Kyc.type,
+          name: booking.Kyc.name,
+          email: booking.Kyc.email,
+          mobile: booking.Kyc.mobile,
+          gstNumber: booking.Kyc.gstNumber
+        } : null
+      };
+    });
+
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      data: formattedPastMembers
+    });
+  } catch (error) {
+    console.error('Error fetching past members:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to retrieve past members',
+      error: error.message
+    });
+  }
+};
 module.exports = adminController;

@@ -14,7 +14,8 @@ router.put('/space-bookings/:id/verify', adminAuthMiddleware, adminController.ve
 
 // Dashboard data
 router.get('/dashboard-data', adminAuthMiddleware, adminController.getDashboardData);
-// Add this line to your existing routes
+// for active & past members
 router.get('/active-members', adminController.getAllActiveMembers);
+router.get('/past-members', adminController.getPastMembers);
 
 module.exports = router;
