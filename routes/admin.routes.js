@@ -4,7 +4,7 @@ const adminController = require('../controllers/admin.controller');
 const adminAuthMiddleware = require('../middlewares/authAdminMiddleware'); 
 
 //admin register 
-// router.post('/register-admin', adminController.registerAdmin);
+router.post('/register-admin', adminController.registerAdmin);
 
 
 //admin login

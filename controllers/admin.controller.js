@@ -10,59 +10,59 @@ const sendMail = require("../utils/helper")
 const adminController = {}; 
 
 // temporary ADMIN register (use only once)
-// adminController.registerAdmin = async (req, res) => {
-//   try {
-//     const { username, email, password, mobile } = req.body;
+adminController.registerAdmin = async (req, res) => {
+  try {
+    const { username, email, password, mobile } = req.body;
 
-//     // Basic validation
-//     if (!username || !email || !password) {
-//       return res.status(HttpStatus.BAD_REQUEST).json({
-//         success: false,
-//         message: 'Username, email, and password are required',
-//       });
-//     }
+    // Basic validation
+    if (!username || !email || !password) {
+      return res.status(HttpStatus.BAD_REQUEST).json({
+        success: false,
+        message: 'Username, email, and password are required',
+      });
+    }
 
-//     // Check if admin already exists
-//     const existingAdmin = await User.findOne({ where: { email } });
-//     if (existingAdmin) {
-//       return res.status(HttpStatus.CONFLICT).json({
-//         success: false,
-//         message: 'Admin with this email already exists',
-//       });
-//     }
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ where: { email } });
+    if (existingAdmin) {
+      return res.status(HttpStatus.CONFLICT).json({
+        success: false,
+        message: 'Admin with this email already exists',
+      });
+    }
 
-//     //  Hash the password
-//     const hashedPassword = await bcrypt.hash(password, 10);
+    //  Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-//     // Create the admin user
-//     const admin = await User.create({
-//       username,
-//       email,
-//       password: hashedPassword,
-//       mobile,
-//       role: 'admin', // mark this user as admin
-//       isActive: true
-//     });
+    // Create the admin user
+    const admin = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+      mobile,
+      role: 'admin', // mark this user as admin
+      isActive: true
+    });
 
-//     return res.status(httpStatus.CREATED).json({
-//       success: true,
-//       message: 'Admin registered successfully',
-//       data: {
-//         id: admin.id,
-//         username: admin.username,
-//         email: admin.email,
-//         role: admin.role
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error registering admin:', error);
-//     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-//       success: false,
-//       message: 'Error registering admin',
-//       error: error.message,
-//     });
-//   }
-// };
+    return res.status(httpStatus.CREATED).json({
+      success: true,
+      message: 'Admin registered successfully',
+      data: {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Error registering admin:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Error registering admin',
+      error: error.message,
+    });
+  }
+};
 
 //login for admin....................................
 adminController.login = async (req, res) => {
