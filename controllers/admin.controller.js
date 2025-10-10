@@ -5,45 +5,125 @@ const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
 const sendMail = require("../utils/helper")
 
-const ADMIN_CREDENTIALS = {
-    email: 'info@cohopers.in',
-    // Store hashed password in production
-    password: 'Cohopers@123'
-};
+
 
 const adminController = {}; 
-  adminController.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
 
-        if (email !== ADMIN_CREDENTIALS.email || password !== ADMIN_CREDENTIALS.password) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
-        }
+// temporary ADMIN register (use only once)
+// adminController.registerAdmin = async (req, res) => {
+//   try {
+//     const { username, email, password, mobile } = req.body;
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { email: ADMIN_CREDENTIALS.email, role: 'admin' },
-            process.env.APP_SUPER_SECRET_KEY,
-            { expiresIn: '24h' }
-        );
+//     // Basic validation
+//     if (!username || !email || !password) {
+//       return res.status(HttpStatus.BAD_REQUEST).json({
+//         success: false,
+//         message: 'Username, email, and password are required',
+//       });
+//     }
 
-        res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            data: { token }
-        });
+//     // Check if admin already exists
+//     const existingAdmin = await User.findOne({ where: { email } });
+//     if (existingAdmin) {
+//       return res.status(HttpStatus.CONFLICT).json({
+//         success: false,
+//         message: 'Admin with this email already exists',
+//       });
+//     }
 
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
-        });
+//     //  Hash the password
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // Create the admin user
+//     const admin = await User.create({
+//       username,
+//       email,
+//       password: hashedPassword,
+//       mobile,
+//       role: 'admin', // mark this user as admin
+//       isActive: true
+//     });
+
+//     return res.status(httpStatus.CREATED).json({
+//       success: true,
+//       message: 'Admin registered successfully',
+//       data: {
+//         id: admin.id,
+//         username: admin.username,
+//         email: admin.email,
+//         role: admin.role
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Error registering admin:', error);
+//     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+//       success: false,
+//       message: 'Error registering admin',
+//       error: error.message,
+//     });
+//   }
+// };
+
+//login for admin....................................
+adminController.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(HttpStatus.BAD_REQUEST).json({
+        success: false,
+        message: 'Email and password are required',
+      });
     }
+
+    // Find user (admin or normal)
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(HttpStatus.UNAUTHORIZED).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Compare password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(HttpStatus.UNAUTHORIZED).json({
+        success: false,
+        message: 'Invalid password',
+      });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.APP_SUPER_SECRET_KEY,
+      { expiresIn: '7d' }
+    );
+
+    //  Return response
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      message: `${user.role === 'admin' ? 'Admin' : 'User'} login successful`,
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Error during login',
+      error: error.message,
+    });
+  }
 };
+
 
 // Get all meeting room bookings for admin panel
 adminController.getAllMeetingRoomBookings = async (req, res) => {
@@ -98,7 +178,6 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
 
 
 // Get all space bookings for admin panel
-
 adminController.getAllSpaceBookings = async (req, res) => {
   try {
     const bookings = await Booking.findAll({

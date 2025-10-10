@@ -24,6 +24,9 @@ Kyc.belongsTo(Booking, { foreignKey: "bookingId" });
 Booking.hasOne(Kyc, { foreignKey: "bookingId" });
 
 // User & CafeteriaOrder relationship is defined in the model file
+User.hasMany(CafeteriaOrder, { foreignKey: "userId", as: 'orders' });
+CafeteriaOrder.belongsTo(User, { foreignKey: "userId", as: 'user' });
+
 
 module.exports = {
   Space,

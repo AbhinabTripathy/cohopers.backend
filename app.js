@@ -33,7 +33,7 @@ const userRoutes = require("./routes/user.routes");
 const spaceRoutes = require("./routes/inventory.routes");
 const bookingRoutes = require("./routes/booking.routes");
 const meetingRoomRoutes = require("./routes/meetingRoom.routes");
-const cafeteriaRoutes = require("./routes/cafeteria.routes"); // Add this line
+const cafeteriaRoutes = require("./routes/cafeteria.routes"); 
 
 
 app.use("/api/admin", adminRoutes);
@@ -41,7 +41,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/spaces",spaceRoutes);
 app.use("/api/booking",bookingRoutes);
 app.use("/api/meetingrooms",meetingRoomRoutes);
-app.use("/api/cafeteria", cafeteriaRoutes); // Add this line
+app.use("/api/cafeteria", cafeteriaRoutes); 
 
 //middlewares
 app.use(handleNotFound);

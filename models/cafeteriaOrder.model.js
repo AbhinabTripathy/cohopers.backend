@@ -62,8 +62,4 @@ const CafeteriaOrder = sequelize.define(
   }
 );
 
-// Define relationships
-User.hasMany(CafeteriaOrder, { foreignKey: "userId", as: 'orders' });
-CafeteriaOrder.belongsTo(User, { foreignKey: "userId", as: 'user' });
-
 module.exports = CafeteriaOrder;

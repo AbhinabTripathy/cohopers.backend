@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const adminAuthMiddleware = require('../middlewares/authAdminMiddleware'); 
+
+//admin register 
+// router.post('/register-admin', adminController.registerAdmin);
+
+
 //admin login
 router.post('/login', adminController.login);
 // Get all meeting room bookings
