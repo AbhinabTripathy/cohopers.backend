@@ -10,5 +10,8 @@ router.post('/login' , userController.login);
 router.get('/dashboard/membership', authMiddleware, userController.getMembershipDetails);
 router.get('/dashboard/bookings', authMiddleware, userController.getUserBookings);
 router.get('/dashboard/room-bookings', authMiddleware, userController.getUserRoomBookings);
+//same for all user put the token of user in bearer token and that will be logout
+router.get('/logout',userController.logout);
+
 
 module.exports = router;

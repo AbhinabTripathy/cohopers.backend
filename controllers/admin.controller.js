@@ -44,7 +44,7 @@ adminController.registerAdmin = async (req, res) => {
       isActive: true
     });
 
-    return res.status(httpStatus.CREATED).json({
+    return res.status(HttpStatus.CREATED).json({
       success: true,
       message: 'Admin registered successfully',
       data: {

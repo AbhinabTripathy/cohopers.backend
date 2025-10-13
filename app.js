@@ -6,6 +6,7 @@ const handleNotFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/errorHandler.middleware");
 const seedMeetingRooms = require('./seeders/meetingRoom.seeder');
 const seedSpaces = require('./seeders/seedSpaces');
+const path = require('path');
 
 require("./models");
 const cors =require("cors");
@@ -26,7 +27,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({extended: false,}));
 app.use(responseMessages);
-
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");

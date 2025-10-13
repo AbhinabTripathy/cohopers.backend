@@ -294,4 +294,25 @@ userController.getUserRoomBookings = async (req, res) => {
     }
 };
 
+//logOut controller...............
+userController.logout = async (req, res) => {
+    try {    
+        return res.success(
+            httpStatus.OK,
+            true,
+            "Logged out successfully"
+        );
+    } catch (error) {
+        console.error('Logout error:', error);
+        return res.error(
+            httpStatus.INTERNAL_SERVER_ERROR,
+            false,
+            "Internal server error",
+            error
+        );
+    }
+};
+
+
+
 module.exports = userController;
