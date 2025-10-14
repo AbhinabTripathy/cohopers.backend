@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const {User, Booking, Space} = require ('../models');
+const {User, Booking, Space, Kyc ,teamMember} = require ('../models');
 const adminController = require('./admin.controller');
 const httpStatus = require("../enums/httpStatusCode.enum");
 const responseMessages = require("../enums/responseMessages.enum");
@@ -312,6 +312,72 @@ userController.logout = async (req, res) => {
         );
     }
 };
+
+//user profile details
+userController.getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    //Find all bookings by this user
+    const bookings = await Booking.findAll({
+      where: { userId },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No bookings found for this user.",
+      });
+    }
+
+    // Get all booking
+    const bookingIds = bookings.map((b) => b.id);
+
+    //Find KYC (for profile )
+    const latestBookingId = bookings[0].id;
+    const kyc = await Kyc.findOne({ where: { bookingId: latestBookingId } });
+
+    if (!kyc) {
+      return res.status(404).json({
+        success: false,
+        message: "No KYC found for the latest booking.",
+      });
+    }
+
+    //Count team members 
+    const teamCount = await teamMember.count({
+      where: { bookingId: bookingIds },
+    });
+
+    // response
+    const profileData = {
+      companyOrFreelancerName:
+        kyc.type === "Company"
+          ? kyc.companyName
+          : kyc.name || "N/A",
+      email: kyc.email,
+      phone: kyc.mobile,
+      teamSize: teamCount,
+      profilePhoto: kyc.photo || null,
+      type: kyc.type,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "User profile fetched successfully",
+      data: profileData,
+    });
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch profile",
+      error: error.message,
+    });
+  }
+};
+
 
 
 
