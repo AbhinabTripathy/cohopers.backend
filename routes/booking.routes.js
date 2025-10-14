@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bookingController = require("../controllers/booking.controller");
 const authUserMiddleware = require("../middlewares/authUserMiddleware");
-const upload = require("../middlewares/upload.middleware"); // multer for screenshot upload
+const upload = require("../middlewares/upload.middleware"); 
 
 router.use(authUserMiddleware);
 
@@ -10,11 +10,11 @@ router.use(authUserMiddleware);
 router.post("/book/space", bookingController.createBooking);
 
 // Upload payment screenshot
-router.post("/:id/payment", upload.single("paymentScreenshot"), bookingController.uploadPayment);
+router.post("/:id/payment", upload("payment-screenshots").single("paymentScreenshot"), bookingController.uploadPayment);
 //kyc upload for specific role
 router.post(
   "/kyc/:id",
-  upload.fields([
+  upload("kyc").fields([
     { name: "idFront", maxCount: 1 },
     { name: "idBack", maxCount: 1 },
     { name: "pan", maxCount: 1 },

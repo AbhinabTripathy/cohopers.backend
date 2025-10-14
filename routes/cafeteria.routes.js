@@ -6,7 +6,7 @@ const adminAuthMiddleware = require('../middlewares/authAdminMiddleware');
 const upload = require('../middlewares/upload.middleware');
 
 // Configure upload middleware for cafeteria
-const cafeteriaUpload = upload.single('paymentScreenshot');
+const cafeteriaUpload = upload("cafeteria").single('paymentScreenshot');
 
 // Public routes
 router.get('/menu', cafeteriaController.getMenu);

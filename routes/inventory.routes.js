@@ -8,11 +8,11 @@ const authUserMiddleware = require("../middlewares/authUserMiddleware")
 router.get('/spaces', inventoryController.getAllSpaces);
 router.get('/spaces/:id', inventoryController.getSpaceById);
 // procted route only for ADMIN 
-router.post('/spaces', authMiddleware,inventoryController.uploadSpaceImages, inventoryController.addSpace);
+router.post('/spaces', authMiddleware,uploadPhoto('spaces').array('spaceImages', 5), inventoryController.addSpace);
 router.put('/spaces/:id', authMiddleware,inventoryController.uploadSpaceImages, inventoryController.updateSpace);
 router.delete('/spaces/:id', authMiddleware,inventoryController.deleteSpace);
 //add team member for booking space
-router.post("/team-members/add",authUserMiddleware,uploadPhoto.single("photo"),inventoryController.addTeamMember);
+router.post("/team-members/add",authUserMiddleware,uploadPhoto('team-members').single('photo'),inventoryController.addTeamMember);
 router.get("/team-members/booking/:bookingId", authUserMiddleware, inventoryController.getTeamMembers);
 router.put("/team-members/:id", authUserMiddleware, inventoryController.updateTeamMember);
 router.delete("/team-members/:id", authUserMiddleware, inventoryController.deleteTeamMember);

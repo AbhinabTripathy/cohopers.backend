@@ -15,7 +15,7 @@ router.get("/amenities", meetingRoomController.getAmenities);
 router.post(
   "/book",
   authMiddleware,
-  fileUpload.fields([
+  fileUpload("meeting-rooms").fields([
     { name: 'paymentScreenshot', maxCount: 1 },
     { name: 'idProof', maxCount: 1 },
     { name: 'coi', maxCount: 1 }

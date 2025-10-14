@@ -6,7 +6,7 @@ const fs = require('fs');
 const inventoryController = {};
 
 // Middleware for handling space image uploads
-inventoryController.uploadSpaceImages = upload.array('spaceImages', 5);
+inventoryController.uploadSpaceImages = upload('spaces').array('spaceImages', 5);
 
 
 // Add new space
@@ -241,7 +241,7 @@ inventoryController.addTeamMember = async (req, res) => {
   try {
     const { fullName, email, phone, role, deskNumber } = req.body;
 
-    // Ensure user is logged in and available in req.user
+    // Ensure user is logged in
     if (!req.user || !req.user.id) {
       return res.status(401).json({
         success: false,
@@ -250,13 +250,11 @@ inventoryController.addTeamMember = async (req, res) => {
     }
 
     const userId = req.user.id;
-    
-    // Log the user ID to help with debugging
     console.log("User ID from token:", userId);
 
-    // Find the user's active monthly space booking
+    // Find user's active confirmed booking
     const booking = await Booking.findOne({
-      where: { userId, status: "Confirm" } // confirmed monthly booking
+      where: { userId, status: "Confirm" }
     });
 
     if (!booking) {
@@ -272,7 +270,7 @@ inventoryController.addTeamMember = async (req, res) => {
       photoPath = `/uploads/team-members/${req.file.filename}`;
     }
 
-    // Create team member entry
+    // Create team member
     const member = await teamMember.create({
       bookingId: booking.id,
       fullName,
@@ -286,18 +284,18 @@ inventoryController.addTeamMember = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Team member added successfully",
-      data: member
+      data: member,
     });
-
   } catch (error) {
     console.error("Error adding team member:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
+
 
 // Get all team members for a booking
 inventoryController.getTeamMembers = async (req, res, next) => {
