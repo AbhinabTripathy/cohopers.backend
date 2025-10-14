@@ -32,7 +32,7 @@ bookingController.uploadPayment = async (req, res) => {
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     booking.paymentScreenshot = req.file.path;
-    booking.status = "Confirm"; // for now auto confirm, can change to admin approval
+    booking.status = "Confirm"; 
     await booking.save();
 
     // Send email to admin

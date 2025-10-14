@@ -35,9 +35,7 @@ const Booking = sequelize.define ("Booking",{
         type:DataTypes.ENUM("Pending","Confirm","Rejected"),
         defaultValue:"Pending",
     },
-    paymentScreenshot:{
-        type:DataTypes.STRING
-    },
+    
 },
 {
     tableName:"bookings",

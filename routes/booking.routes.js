@@ -11,7 +11,7 @@ router.post("/book/space", bookingController.createBooking);
 
 // Upload payment screenshot
 router.post("/:id/payment", upload("payment-screenshots").single("paymentScreenshot"), bookingController.uploadPayment);
-//kyc upload for specific role
+//kyc upload
 router.post(
   "/kyc/:id",
   upload("kyc").fields([

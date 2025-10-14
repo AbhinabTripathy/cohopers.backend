@@ -185,12 +185,17 @@ adminController.getAllSpaceBookings = async (req, res) => {
         {
           model: User,
           as: "user",
-          attributes: ["id", "username", "email", "mobile"]
+          attributes: ["id", "username", "email", "mobile"],
+          
         },
         {
           model: Space,
           as: "space",
           attributes: ["id", "space_name", "roomNumber", "cabinNumber", "seater"]
+        },
+        {
+          model: Kyc,
+          attributes: ["paymentScreenshot"]
         }
       ],
       order: [["createdAt", "DESC"]]
@@ -212,7 +217,8 @@ adminController.getAllSpaceBookings = async (req, res) => {
       endDate: booking.endDate,
       amount: booking.amount,
       status: booking.status,
-      paymentScreenshot: booking.paymentScreenshot,
+      paymentScreenshot: booking.Kyc ? booking.Kyc.paymentScreenshot : null
+
     }));
 
     res.status(200).json({
@@ -262,6 +268,10 @@ adminController.verifySpaceBooking = async (req, res) => {
           model: Space,
           as:"space",
           attributes: ["id", "space_name", "roomNumber", "cabinNumber"]
+        },
+        {
+          model:Kyc,
+          attributes:["paymentScreenshot"]
         }
       ]
     });
