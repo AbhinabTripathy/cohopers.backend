@@ -11,6 +11,7 @@ router.get("/booking-types", meetingRoomController.getBookingTypes);
 router.get("/member-types", meetingRoomController.getMemberTypes);
 router.get("/pricing", meetingRoomController.getRoomPricing);
 router.get("/available-slots", meetingRoomController.getAvailableTimeSlots);
+router.get("/available-days", meetingRoomController.getAvailableDays);
 router.get("/amenities", meetingRoomController.getAmenities);
 router.post(
   "/book",

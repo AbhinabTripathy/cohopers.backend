@@ -27,6 +27,9 @@ Booking.hasOne(Kyc, { foreignKey: "bookingId" });
 User.hasMany(CafeteriaOrder, { foreignKey: "userId", as: 'orders' });
 CafeteriaOrder.belongsTo(User, { foreignKey: "userId", as: 'user' });
 
+// Meeting room booking & User
+User.hasMany(roomBooking, { foreignKey: "userId", as: "roomBookings" });
+roomBooking.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 module.exports = {
   Space,

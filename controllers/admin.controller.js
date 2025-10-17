@@ -132,6 +132,7 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
       include: [
         {
           model: User,
+          as: 'user',
           attributes: ["id", "username", "email"]
         },
         {
@@ -146,8 +147,8 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
     const formattedBookings = bookings.map((booking, index) => {
       return {
         sl: index + 1,
-        userId: booking.user.id,
-        userName: booking.user.username,
+        userId: booking.user?.id || null,
+        userName: booking.user?.username || null,
         bookingType: booking.bookingType, // Hourly / WholeDay
         memberType: booking.memberType,
         date: booking.bookingDate,
@@ -156,19 +157,19 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
           booking.bookingType === "Hourly"
             ? booking.timeSlots?.join(", ")
             : "Full Day",
-        paymentEmail: booking.user.email,
+        paymentEmail: booking.user?.email || null,
         status: booking.status,
         id: booking.id
       };
     });
-  
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
       message: "Booked Meeting room retrieved successfully",
       data: formattedBookings
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to retrieve meeting room bookings",
       error: error.message

@@ -8,12 +8,7 @@ if (!fs.existsSync(baseUploadDir)) {
   fs.mkdirSync(baseUploadDir, { recursive: true });
 }
 
-/**
- * ✅ Create a reusable upload middleware
- * Example use:
- *    const upload = require("../middlewares/upload.middleware");
- *    router.post("/team-members/add", upload("team-members").single("photo"), controller.addTeamMember);
- */
+
 const upload = (folderName = "") => {
   // Make sure folder exists
   const uploadDir = path.join(baseUploadDir, folderName);

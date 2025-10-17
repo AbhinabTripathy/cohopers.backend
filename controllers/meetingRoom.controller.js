@@ -556,4 +556,82 @@ meetingRoomController.bookRoom = async (req, res) => {
    } 
  };
 
+// Whole-day availability by month (free vs booked days)
+meetingRoomController.getAvailableDays = async (req, res) => {
+  try {
+    const { capacityType, year, month } = req.query;
+
+    if (!capacityType || !year || !month) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "capacityType, year and month are required"
+      );
+    }
+
+    const room = await MeetingRoom.findOne({ where: { capacityType } });
+    if (!room) {
+      return res.error(httpStatus.NOT_FOUND, false, "Meeting room not found");
+    }
+
+    const y = parseInt(year, 10);
+    const m = parseInt(month, 10); // 1..12
+    if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
+      return res.error(httpStatus.BAD_REQUEST, false, "Invalid year or month");
+    }
+
+    // First and last day of the requested month
+    const start = new Date(y, m - 1, 1);
+    const lastDay = new Date(y, m, 0).getDate();
+    const startStr = start.toISOString().slice(0, 10);
+    const end = new Date(y, m - 1, lastDay);
+    const endStr = end.toISOString().slice(0, 10);
+
+    // Block days if there is any booking in 'pending' or 'confirmed' status
+    // (both Hourly and Whole Day bookings block full-day bookings)
+    const bookedStatuses = ['pending', 'confirmed'];
+
+    const bookings = await RoomBooking.findAll({
+      where: {
+        roomId: room.id,
+        bookingDate: { [Op.between]: [startStr, endStr] },
+        status: { [Op.in]: bookedStatuses }
+      },
+      attributes: ['bookingDate', 'bookingType', 'timeSlots']
+    });
+
+    const bookedDateSet = new Set(bookings.map(b => b.bookingDate));
+
+    const freeDates = [];
+    const bookedDates = [];
+
+    for (let d = 1; d <= lastDay; d++) {
+      const dateObj = new Date(y, m - 1, d);
+      const dateStr = dateObj.toISOString().slice(0, 10);
+      if (bookedDateSet.has(dateStr)) {
+        bookedDates.push(dateStr);
+      } else {
+        freeDates.push(dateStr);
+      }
+    }
+
+    return res.success(
+      httpStatus.OK,
+      true,
+      "Available days fetched successfully",
+      {
+        roomId: room.id,
+        capacityType,
+        year: y,
+        month: m,
+        freeDates,
+        bookedDates
+      }
+    );
+  } catch (error) {
+    console.error("Error fetching available days:", error);
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Internal server error", error);
+  }
+};
+
 module.exports = meetingRoomController;
