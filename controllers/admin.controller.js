@@ -64,6 +64,7 @@ adminController.registerAdmin = async (req, res) => {
   }
 };
 
+
 //login for admin....................................
 adminController.login = async (req, res) => {
   try {
@@ -440,79 +441,103 @@ adminController.getDashboardData = async (req, res) => {
   }
 };
 
-// Get all active members
-adminController.getAllActiveMembers = async (req, res) => {
-  try {
-    // Find all confirmed bookings with their user and space
-    const activeBookings = await Booking.findAll({
-      where: {
-        status: 'Confirm' 
-      },
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'email', 'mobile']
-        },
-        {
-          model: Space,
-          as: 'space',
-          attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
-        },
-        {
-          model: Kyc,
-          attributes: ['id', 'type', 'name', 'email', 'mobile', 'gstNumber'] // Updated to match your model
-        }
-      ],
-      order: [['id', 'ASC']]
-    });
+// Get all active members 
+ adminController.getAllActiveMembers = async (req, res) => { 
+   try { 
+     // Find all confirmed bookings with their user and space 
+     const activeBookings = await Booking.findAll({ 
+       where: { 
+         status: 'Confirm' 
+       }, 
+       include: [ 
+         { 
+           model: User, 
+           as: 'user', 
+           attributes: ['id', 'username', 'email', 'mobile'] 
+         }, 
+         { 
+           model: Space, 
+           as: 'space', 
+           attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price'] 
+         }, 
+         { 
+           model: Kyc,
+           // Include all KYC fields
+           attributes: { exclude: ['createdAt', 'updatedAt'] }
+         } 
+       ], 
+       order: [['id', 'ASC']] 
+     }); 
+ 
+ 
+     // Format the data 
+     const formattedMembers = activeBookings.map(booking => { 
+       return { 
+         id: booking.id, 
+         name: booking.user.username, 
+         mobile: booking.user.mobile, 
+         spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk', 
+         startDate: booking.startDate, 
+         endDate: booking.endDate, 
+         unit: booking.space.seater, 
+         amount: booking.amount, 
+         email: booking.user.email, 
+         details: { 
+           id: booking.id, 
+           userId: booking.userId, 
+           spaceId: booking.spaceId, 
+           bookingDate: booking.date, 
+           startDate: booking.startDate, 
+           endDate: booking.endDate, 
+           amount: booking.amount, 
+           status: booking.status 
+         }, 
+         kycDetails: booking.Kyc ? {
+           // Include all KYC fields
+           id: booking.Kyc.id,
+           bookingId: booking.Kyc.bookingId,
+           documentType: booking.Kyc.type,
+           name: booking.Kyc.name,
+           email: booking.Kyc.email,
+           mobile: booking.Kyc.mobile,
+           gstNumber: booking.Kyc.gstNumber,
+           // Freelancer fields
+           idFront: booking.Kyc.idFront,
+           idBack: booking.Kyc.idBack,
+           pan: booking.Kyc.pan,
+           photo: booking.Kyc.photo,
+           paymentScreenshot: booking.Kyc.paymentScreenshot,
+           // Company fields
+           companyName: booking.Kyc.companyName,
+           certificateOfIncorporation: booking.Kyc.certificateOfIncorporation,
+           companyPAN: booking.Kyc.companyPAN,
+           directorName: booking.Kyc.directorName,
+           din: booking.Kyc.din,
+           // Director KYC fields
+           directorPAN: booking.Kyc.directorPAN,
+           directorPhoto: booking.Kyc.directorPhoto,
+           directorIdFront: booking.Kyc.directorIdFront,
+           directorIdBack: booking.Kyc.directorIdBack,
+           directorPaymentProof: booking.Kyc.directorPaymentProof
+         } : null 
+       }; 
+     }); 
+ 
+ 
+     return res.status(HttpStatus.OK).json({ 
+       success: true, 
+       data: formattedMembers 
+     }); 
+   } catch (error) { 
+     console.error('Error fetching active members:', error); 
+     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ 
+       success: false, 
+       message: 'Failed to retrieve active members', 
+       error: error.message 
+     }); 
+   } 
+ };
 
-    // Format the data 
-    const formattedMembers = activeBookings.map(booking => {
-      return {
-        id: booking.id,
-        name: booking.user.username,
-        mobile: booking.user.mobile, 
-        spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk',
-        startDate: booking.startDate,
-        endDate: booking.endDate,
-        unit: booking.space.seater,
-        amount: booking.amount,
-        email: booking.user.email,
-        details: {
-          id: booking.id,
-          userId: booking.userId,
-          spaceId: booking.spaceId,
-          bookingDate: booking.date,
-          startDate: booking.startDate,
-          endDate: booking.endDate,
-          amount: booking.amount,
-          status: booking.status
-        },
-        kycDetails: booking.Kyc ? {
-          id: booking.Kyc.id,
-          documentType: booking.Kyc.type, 
-          name: booking.Kyc.name,
-          email: booking.Kyc.email,
-          mobile: booking.Kyc.mobile,
-          gstNumber: booking.Kyc.gstNumber
-        } : null
-      };
-    });
-
-    return res.status(HttpStatus.OK).json({
-      success: true,
-      data: formattedMembers
-    });
-  } catch (error) {
-    console.error('Error fetching active members:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Failed to retrieve active members',
-      error: error.message
-    });
-  }
-};
 // Get all past members
 adminController.getPastMembers = async (req, res) => {
   try {

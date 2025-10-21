@@ -23,7 +23,7 @@ router.post(
   ]),
   meetingRoomController.bookRoom
 );
-// Protected routes that require authentication
+// verify booking
 router.put("/verify-booking/:bookingId", meetingRoomController.verifyBooking);
 
 module.exports = router;
