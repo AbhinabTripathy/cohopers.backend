@@ -378,6 +378,112 @@ userController.getUserProfile = async (req, res) => {
   }
 };
 
+// Update user profile (name, email, mobile, profile photo)
+userController.updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find all bookings by this user (most recent used for KYC linkage)
+    const bookings = await Booking.findAll({
+      where: { userId },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!bookings || bookings.length === 0) {
+      return res.error(
+        httpStatus.NOT_FOUND,
+        false,
+        "No bookings found for this user. Cannot attach KYC/profile."
+      );
+    }
+
+    const latestBookingId = bookings[0].id;
+
+    // Find existing KYC for the latest booking or create one
+    let kycRecord = await Kyc.findOne({ where: { bookingId: latestBookingId } });
+
+    const { name, email, mobile } = req.body;
+
+    // Also fetch the user record so we can update primary profile fields
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.error(
+        httpStatus.NOT_FOUND,
+        false,
+        "User not found"
+      );
+    }
+
+    // If email is provided, ensure it's not used by another user
+    if (email) {
+      const emailOwner = await User.findOne({ where: { email } });
+      if (emailOwner && emailOwner.id !== userId) {
+        return res.error(
+          httpStatus.CONFLICT,
+          false,
+          "Email is already in use by another account"
+        );
+      }
+    }
+
+    if (!kycRecord) {
+      // create a minimal KYC record so profile info can be stored
+      const createData = {
+        bookingId: latestBookingId,
+        name: name || null,
+        email: email || null,
+        mobile: mobile || null,
+      };
+
+      if (req.file) {
+        createData.photo = req.file.filename;
+      }
+
+      kycRecord = await Kyc.create(createData);
+    } else {
+      // update existing KYC fields if provided
+      if (name) kycRecord.name = name;
+      if (email) kycRecord.email = email;
+      if (mobile) kycRecord.mobile = mobile;
+      if (req.file) kycRecord.photo = req.file.filename;
+
+      await kycRecord.save();
+    }
+
+    // Update User primary fields if provided
+    let userUpdated = false;
+    if (name && user.username !== name) {
+      user.username = name;
+      userUpdated = true;
+    }
+    if (email && user.email !== email) {
+      user.email = email;
+      userUpdated = true;
+    }
+    if (mobile && user.mobile !== mobile) {
+      user.mobile = mobile;
+      userUpdated = true;
+    }
+
+    if (userUpdated) await user.save();
+
+    return res.success(
+      httpStatus.OK,
+      true,
+      "Profile updated successfully",
+      { profile: kycRecord }
+    );
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Failed to update profile",
+      error
+    );
+  }
+};
+
 
 
 

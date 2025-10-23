@@ -3,6 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const adminController = require('../controllers/admin.controller');
 const authMiddleware = require("../middlewares/authUserMiddleware")
+const upload = require("../middlewares/upload.middleware");
 
 
 router.post('/register',userController.register);
@@ -14,6 +15,13 @@ router.get('/dashboard/bookings', authMiddleware, userController.getUserBookings
 router.get('/dashboard/room-bookings', authMiddleware, userController.getUserRoomBookings);
 
 router.get("/profile", authMiddleware, userController.getUserProfile);
+// Update profile (supports profile photo upload)
+router.put(
+	"/profile",
+	authMiddleware,
+	upload('kyc').single('profilePhoto'),
+	userController.updateUserProfile
+);
 
 
 
