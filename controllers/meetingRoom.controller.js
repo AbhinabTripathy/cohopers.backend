@@ -322,6 +322,13 @@ meetingRoomController.bookRoom = async (req, res) => {
     }
     
     // Get customer information from authenticated user
+    if (!req.user) {
+      return res.error(
+        httpStatus.UNAUTHORIZED,
+        false,
+        "Unauthorized: missing or invalid token"
+      );
+    }
     const userName = req.user.username;
     const userEmail = req.user.email;
     const userPhone = req.user.mobile;
@@ -452,18 +459,15 @@ meetingRoomController.bookRoom = async (req, res) => {
     // Add file paths for non-members
     if (memberType !== "Member") {
       if (req.files.paymentScreenshot) {
-        bookingData.paymentScreenshot = `/uploads/spaces/${req.files.paymentScreenshot[0].filename}`;
+        bookingData.paymentScreenshot = `/uploads/meeting-rooms/${req.files.paymentScreenshot[0].filename}`;
       }
-      
       if (req.files.idProof) {
-        bookingData.idProof = `/uploads/spaces/${req.files.idProof[0].filename}`;
+        bookingData.idProof = `/uploads/meeting-rooms/${req.files.idProof[0].filename}`;
       }
-      
       if (req.files.coi) {
-        bookingData.certificateOfIncorporation = `/uploads/spaces/${req.files.coi[0].filename}`;
+        bookingData.certificateOfIncorporation = `/uploads/meeting-rooms/${req.files.coi[0].filename}`;
       }
     } else {
-      // For members, set a default value for paymentScreenshot since it's required in the model
       bookingData.paymentScreenshot = "member-no-payment-required";
     }
     
