@@ -127,6 +127,14 @@ userController.login = async (req, res) => {
       );
     }
 
+    // Check if user has KYC (member) or not (non-member)
+    const userKyc = await Kyc.findOne({
+      where: { email: user.email }
+    });
+
+    // Determine member type
+    const memberType = userKyc ? 'member' : 'non-member';
+
     // Remove password from response object
     const userResponse = user.toJSON();
     delete userResponse.password;
@@ -148,7 +156,9 @@ userController.login = async (req, res) => {
       "Login successful",
       {
         user: userResponse,
-        token
+        token,
+        memberType,
+        kycRequired: memberType === 'non-member'
       }
     );
 
