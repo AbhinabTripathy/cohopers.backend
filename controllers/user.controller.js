@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const {User, Booking, Space, Kyc ,teamMember} = require ('../models');
+const {User, Booking, Space, Kyc, teamMember} = require ('../models');
 const adminController = require('./admin.controller');
 const httpStatus = require("../enums/httpStatusCode.enum");
 const responseMessages = require("../enums/responseMessages.enum");
@@ -62,7 +62,7 @@ userController.register = async (req, res) => {
         const token = jwt.sign(
             { 
                 id: newUser.id, 
-                name: newUser.name,
+                username: newUser.username,
                 role: 'user' 
             },
             process.env.APP_SUPER_SECRET_KEY,
@@ -96,46 +96,38 @@ userController.login = async (req, res) => {
 
     // Validate input
     if (!mobile || !password) {
-      return res.error(
-        httpStatus.BAD_REQUEST,
-        false,
-        "Mobile number and password are required"
-      );
+      return res.error(httpStatus.BAD_REQUEST, false, "Mobile number and password are required");
     }
 
     // Find user by mobile number
-    const user = await User.findOne({
-      where: { mobile }
-    });
-
+    const user = await User.findOne({ where: { mobile } });
     if (!user) {
-      return res.error(
-        httpStatus.UNAUTHORIZED,
-        false,
-        "Invalid mobile number or password"
-      );
+      return res.error(httpStatus.UNAUTHORIZED, false, "Invalid mobile number or password");
     }
 
     // Compare password hash
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
-      return res.error(
-        httpStatus.UNAUTHORIZED,
-        false,
-        "Invalid mobile number or password"
-      );
+      return res.error(httpStatus.UNAUTHORIZED, false, "Invalid mobile number or password");
     }
 
-    // Check if user has KYC (member) or not (non-member)
+    // Check if user has KYC
     const userKyc = await Kyc.findOne({
-      where: { email: user.email }
+      where: { email: user.email },
+    });
+
+    // Check if user has an occupied space (confirmed booking)
+    const occupiedSpace = await Booking.findOne({
+      where: {
+        userId: user.id,
+        status: 'Confirm',
+      },
     });
 
     // Determine member type
-    const memberType = userKyc ? 'member' : 'non-member';
+    const memberType = userKyc && occupiedSpace ? 'member' : 'non-member';
 
-    // Remove password from response object
+    // Remove password from response
     const userResponse = user.toJSON();
     delete userResponse.password;
 
@@ -143,35 +135,26 @@ userController.login = async (req, res) => {
     const token = jwt.sign(
       {
         id: user.id,
-        name: user.name,
+        username: user.username,
         role: 'user'
       },
       process.env.APP_SUPER_SECRET_KEY,
       { expiresIn: '24h' }
     );
 
-    return res.success(
-      httpStatus.OK,
-      true,
-      "Login successful",
-      {
-        user: userResponse,
-        token,
-        memberType,
-        kycRequired: memberType === 'non-member'
-      }
-    );
+    return res.success(httpStatus.OK, true, "Login successful", {
+      user: userResponse,
+      token,
+      memberType,
+      kycRequired: !userKyc
+    });
 
   } catch (error) {
     console.error("User login error:", error);
-    return res.error(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      false,
-      "Error during login",
-      error
-    );
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Error during login", error);
   }
 };
+
 
 // Get user's membership details
 userController.getMembershipDetails = async (req, res) => {
