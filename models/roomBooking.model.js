@@ -1,20 +1,27 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-const MeetingRoom = require("./meetingRoom.model");
 
 const RoomBooking = sequelize.define(
-  "meetingRoomBooking",
+  "roomBooking",
   {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    roomId: {
+    meetingRoomId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: MeetingRoom,
+        model: "meeting_rooms",
+        key: "id",
+      },
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "users",
         key: "id",
       },
     },
@@ -64,28 +71,14 @@ const RoomBooking = sequelize.define(
       allowNull: true,
     },
     paymentScreenshot: {
-      type:DataTypes.STRING,
-      allowNull:false
-    },
-    userId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
-      references: {
-      model: "users", 
-      key: "id",
-  },
-},
-
+    },
   },
   {
     timestamps: true,
+    tableName: "room_bookings",
   }
 );
-
-// Define relationships
-MeetingRoom.hasMany(RoomBooking, { foreignKey: "roomId" });
-RoomBooking.belongsTo(MeetingRoom, { foreignKey: "roomId" });
-
-
 
 module.exports = RoomBooking;

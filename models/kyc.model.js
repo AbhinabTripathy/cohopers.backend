@@ -8,10 +8,6 @@ const Kyc = sequelize.define('Kyc',{
     autoIncrement: true,
     primaryKey: true,
   },
-  bookingId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
   type: {
     type: DataTypes.ENUM("Freelancer", "Company"),
     allowNull: false,
@@ -43,6 +39,27 @@ const Kyc = sequelize.define('Kyc',{
   directorIdFront: DataTypes.STRING,
   directorIdBack: DataTypes.STRING,
   directorPaymentProof: DataTypes.STRING,
+
+  // Approval status
+  status: {
+    type: DataTypes.ENUM("Pending", "Approved", "Rejected"),
+    allowNull: false,
+    defaultValue: "Pending",
+  },
+
+  // KYC is user-scoped
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // Temporarily allow null for migration
+    references: {
+      model: "users",
+      key: "id",
+    },
+  },
+  bookingId: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // Temporarily allow null for migration
+  }
 },
 {
 

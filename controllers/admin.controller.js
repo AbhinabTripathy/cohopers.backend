@@ -617,4 +617,49 @@ adminController.getPastMembers = async (req, res) => {
     });
   }
 };
+
+
+adminController.verifyKyc = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!id) {
+      return res.status(HttpStatus.BAD_REQUEST).json({
+        success: false,
+        message: "KYC ID is required",
+      });
+    }
+
+    if (!status || !["Approved", "Rejected"].includes(status)) {
+      return res.status(HttpStatus.BAD_REQUEST).json({
+        success: false,
+        message: "Status must be either 'Approved' or 'Rejected'",
+      });
+    }
+
+    const kyc = await require("../models").Kyc.findByPk(id);
+    if (!kyc) {
+      return res.status(HttpStatus.NOT_FOUND).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+
+    kyc.status = status;
+    await kyc.save();
+
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      message: `KYC ${status.toLowerCase()} successfully`,
+      data: { id: kyc.id, status: kyc.status },
+    });
+  } catch (error) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to verify KYC",
+      error: error.message,
+    });
+  }
+};
 module.exports = adminController;

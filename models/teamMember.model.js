@@ -13,7 +13,7 @@ const TeamMember = sequelize.define("TeamMember", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: Booking,
+      model: "bookings",
       key: "id",
     },
   },

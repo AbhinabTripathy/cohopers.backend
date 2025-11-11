@@ -89,66 +89,78 @@ userController.register = async (req, res) => {
         );
     }
 };
-// User login
-userController.login = async (req, res) => {
-  try {
+// User login 
+userController.login = async (req, res) => { 
+  try { 
     const { mobile, password } = req.body;
 
-    // Validate input
     if (!mobile || !password) {
       return res.error(httpStatus.BAD_REQUEST, false, "Mobile number and password are required");
     }
 
-    // Find user by mobile number
     const user = await User.findOne({ where: { mobile } });
     if (!user) {
       return res.error(httpStatus.UNAUTHORIZED, false, "Invalid mobile number or password");
     }
 
-    // Compare password hash
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.error(httpStatus.UNAUTHORIZED, false, "Invalid mobile number or password");
     }
 
-    // Check if user has KYC
+    // Find KYC by userId (approval is required to login)
     const userKyc = await Kyc.findOne({
-      where: { email: user.email },
+      where: { userId: user.id },
+      order: [["createdAt", "DESC"]],
     });
 
-    // Check if user has an occupied space (confirmed booking)
-    const occupiedSpace = await Booking.findOne({
-      where: {
-        userId: user.id,
-        status: 'Confirm',
-      },
+    if (!userKyc || userKyc.status !== "Approved") {
+      return res.error(
+        httpStatus.FORBIDDEN,
+        false,
+        "KYC pending or not approved. Please complete KYC or wait for admin approval."
+      );
+    }
+
+    // Check occupied space (confirmed booking)
+    const userBooking = await Booking.findOne({
+      where: { userId: user.id, status: "Confirm" },
+      include: [
+        {
+          model: require("../models/space.model"),
+          as: "space",
+          attributes: ["id", "space_name", "roomNumber", "cabinNumber"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
     });
 
-    // Determine member type
-    const memberType = userKyc && occupiedSpace ? 'member' : 'non-member';
+    const occupiedSpace = userBooking && userBooking.space
+      ? {
+          id: userBooking.space.id,
+          name: userBooking.space.space_name,
+          roomNumber: userBooking.space.roomNumber,
+          cabinNumber: userBooking.space.cabinNumber,
+        }
+      : null;
 
-    // Remove password from response
+    const memberType = occupiedSpace ? "member" : "non-member";
+
     const userResponse = user.toJSON();
     delete userResponse.password;
 
-    // Generate JWT token
     const token = jwt.sign(
-      {
-        id: user.id,
-        username: user.username,
-        role: 'user'
-      },
+      { id: user.id, username: user.username, role: "user" },
       process.env.APP_SUPER_SECRET_KEY,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     return res.success(httpStatus.OK, true, "Login successful", {
       user: userResponse,
       token,
       memberType,
-      kycRequired: !userKyc
+      kycRequired: false
     });
-
   } catch (error) {
     console.error("User login error:", error);
     return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Error during login", error);
@@ -327,14 +339,13 @@ userController.getUserProfile = async (req, res) => {
     // Get all booking
     const bookingIds = bookings.map((b) => b.id);
 
-    //Find KYC (for profile )
-    const latestBookingId = bookings[0].id;
-    const kyc = await Kyc.findOne({ where: { bookingId: latestBookingId } });
+    //Find KYC by user
+    const kyc = await Kyc.findOne({ where: { userId } });
 
     if (!kyc) {
       return res.status(404).json({
         success: false,
-        message: "No KYC found for the latest booking.",
+        message: "No KYC found for this user.",
       });
     }
 
@@ -376,24 +387,8 @@ userController.updateUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Find all bookings by this user (most recent used for KYC linkage)
-    const bookings = await Booking.findAll({
-      where: { userId },
-      order: [["createdAt", "DESC"]],
-    });
-
-    if (!bookings || bookings.length === 0) {
-      return res.error(
-        httpStatus.NOT_FOUND,
-        false,
-        "No bookings found for this user. Cannot attach KYC/profile."
-      );
-    }
-
-    const latestBookingId = bookings[0].id;
-
-    // Find existing KYC for the latest booking or create one
-    let kycRecord = await Kyc.findOne({ where: { bookingId: latestBookingId } });
+    // Find or create KYC for user
+    let kycRecord = await Kyc.findOne({ where: { userId } });
 
     const { name, email, mobile } = req.body;
 
@@ -422,7 +417,7 @@ userController.updateUserProfile = async (req, res) => {
     if (!kycRecord) {
       // create a minimal KYC record so profile info can be stored
       const createData = {
-        bookingId: latestBookingId,
+        userId,
         name: name || null,
         email: email || null,
         mobile: mobile || null,

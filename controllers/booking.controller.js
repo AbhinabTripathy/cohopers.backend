@@ -51,8 +51,11 @@ bookingController.submitKyc = async (req, res) => {
     const { type, name, email, mobile, companyName, gstNumber, directorName, din } = req.body;
     const bookingId = req.params.id;
 
+    // Use authenticated user as KYC owner
+    const userId = req.user.id;
+
     let kycData = {
-      bookingId,
+      userId,
       type,
       name,
       email,
@@ -90,7 +93,7 @@ bookingController.submitKyc = async (req, res) => {
     await sendMail(
       "info@cohopers.in",
       "New KYC Submission",
-      `A user has submitted ${type} KYC for booking ID: ${bookingId}`
+      `A user has submitted ${type} KYC for user ID: ${userId}`
     );
 
     res.json({ message: "KYC submitted successfully", kyc });

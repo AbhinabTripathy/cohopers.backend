@@ -23,4 +23,7 @@ router.get('/dashboard-data', adminAuthMiddleware, adminController.getDashboardD
 router.get('/active-members', adminController.getAllActiveMembers);
 router.get('/past-members', adminController.getPastMembers);
 
+// Verify KYC
+router.put('/kyc/:id/verify', adminAuthMiddleware, adminController.verifyKyc);
+
 module.exports = router;

@@ -16,7 +16,7 @@ const AvailableDate = sequelize.define('AvailableDate', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: Space,
+      model: "spaces",
       key: 'id'
     }
   },
