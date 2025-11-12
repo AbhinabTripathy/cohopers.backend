@@ -24,7 +24,6 @@ const Kyc = sequelize.define('Kyc',{
   idBack: DataTypes.STRING,
   pan: DataTypes.STRING,
   photo: DataTypes.STRING,
-  paymentScreenshot: DataTypes.STRING,
 
   // Company fields
   companyName: DataTypes.STRING,

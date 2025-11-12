@@ -197,6 +197,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
         },
         {
           model: Kyc,
+          as: "kyc",
           attributes: ["paymentScreenshot"]
         }
       ],
@@ -219,7 +220,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
       endDate: booking.endDate,
       amount: booking.amount,
       status: booking.status,
-      paymentScreenshot: booking.Kyc ? booking.Kyc.paymentScreenshot : null
+  paymentScreenshot: booking.kyc ? booking.kyc.paymentScreenshot : null
 
     }));
 
@@ -273,6 +274,7 @@ adminController.verifySpaceBooking = async (req, res) => {
         },
         {
           model:Kyc,
+          as: "kyc",
           attributes:["paymentScreenshot"]
         }
       ]
@@ -462,6 +464,7 @@ adminController.getDashboardData = async (req, res) => {
          }, 
          { 
            model: Kyc,
+           as: "kyc",
            // Include all KYC fields
            attributes: { exclude: ['createdAt', 'updatedAt'] }
          } 
@@ -492,34 +495,34 @@ adminController.getDashboardData = async (req, res) => {
            amount: booking.amount, 
            status: booking.status 
          }, 
-         kycDetails: booking.Kyc ? {
-           // Include all KYC fields
-           id: booking.Kyc.id,
-           bookingId: booking.Kyc.bookingId,
-           documentType: booking.Kyc.type,
-           name: booking.Kyc.name,
-           email: booking.Kyc.email,
-           mobile: booking.Kyc.mobile,
-           gstNumber: booking.Kyc.gstNumber,
-           // Freelancer fields
-           idFront: booking.Kyc.idFront,
-           idBack: booking.Kyc.idBack,
-           pan: booking.Kyc.pan,
-           photo: booking.Kyc.photo,
-           paymentScreenshot: booking.Kyc.paymentScreenshot,
-           // Company fields
-           companyName: booking.Kyc.companyName,
-           certificateOfIncorporation: booking.Kyc.certificateOfIncorporation,
-           companyPAN: booking.Kyc.companyPAN,
-           directorName: booking.Kyc.directorName,
-           din: booking.Kyc.din,
-           // Director KYC fields
-           directorPAN: booking.Kyc.directorPAN,
-           directorPhoto: booking.Kyc.directorPhoto,
-           directorIdFront: booking.Kyc.directorIdFront,
-           directorIdBack: booking.Kyc.directorIdBack,
-           directorPaymentProof: booking.Kyc.directorPaymentProof
-         } : null 
+        kycDetails: booking.kyc ? {
+          // Include all KYC fields
+          id: booking.kyc.id,
+          bookingId: booking.kyc.bookingId,
+          documentType: booking.kyc.type,
+          name: booking.kyc.name,
+          email: booking.kyc.email,
+          mobile: booking.kyc.mobile,
+          gstNumber: booking.kyc.gstNumber,
+          // Freelancer fields
+          idFront: booking.kyc.idFront,
+          idBack: booking.kyc.idBack,
+          pan: booking.kyc.pan,
+          photo: booking.kyc.photo,
+          paymentScreenshot: booking.kyc.paymentScreenshot,
+          // Company fields
+          companyName: booking.kyc.companyName,
+          certificateOfIncorporation: booking.kyc.certificateOfIncorporation,
+          companyPAN: booking.kyc.companyPAN,
+          directorName: booking.kyc.directorName,
+          din: booking.kyc.din,
+          // Director KYC fields
+          directorPAN: booking.kyc.directorPAN,
+          directorPhoto: booking.kyc.directorPhoto,
+          directorIdFront: booking.kyc.directorIdFront,
+          directorIdBack: booking.kyc.directorIdBack,
+          directorPaymentProof: booking.kyc.directorPaymentProof
+        } : null 
        }; 
      }); 
  
@@ -565,6 +568,7 @@ adminController.getPastMembers = async (req, res) => {
         },
         {
           model: Kyc,
+          as: "kyc",
           attributes: ['id', 'type', 'name', 'email', 'mobile', 'gstNumber']
         }
       ],
@@ -593,13 +597,13 @@ adminController.getPastMembers = async (req, res) => {
           amount: booking.amount,
           status: booking.status
         },
-        kycDetails: booking.Kyc ? {
-          id: booking.Kyc.id,
-          documentType: booking.Kyc.type,
-          name: booking.Kyc.name,
-          email: booking.Kyc.email,
-          mobile: booking.Kyc.mobile,
-          gstNumber: booking.Kyc.gstNumber
+        kycDetails: booking.kyc ? {
+          id: booking.kyc.id,
+          documentType: booking.kyc.type,
+          name: booking.kyc.name,
+          email: booking.kyc.email,
+          mobile: booking.kyc.mobile,
+          gstNumber: booking.kyc.gstNumber
         } : null
       };
     });

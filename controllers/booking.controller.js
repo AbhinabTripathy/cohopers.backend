@@ -31,15 +31,17 @@ bookingController.uploadPayment = async (req, res) => {
     const booking = await Booking.findByPk(req.params.id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    booking.paymentScreenshot = req.file.path;
-    booking.status = "Confirm"; 
-    await booking.save();
+  // Save screenshot path (use web-accessible uploads path for consistency)
+  booking.paymentScreenshot = `/uploads/payment-screenshots/${req.file.filename}`;
+  // Do NOT auto-confirm the booking here. Keep status as 'Pending' so admin can verify and confirm.
+  await booking.save();
 
     // Send email to admin
     await sendMail("info@cohopers.in", "New Booking Payment Received",
       `A user has uploaded payment screenshot for booking ID: ${booking.id}`);
 
-    res.json({ message: "Payment uploaded & booking confirmed", booking });
+  // Notify admin that a payment has been submitted and is awaiting verification
+  res.json({ message: "Payment uploaded successfully and is pending admin verification", booking });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -73,7 +75,6 @@ bookingController.submitKyc = async (req, res) => {
       if (req.files["idBack"]) kycData.idBack = req.files["idBack"][0].path;
       if (req.files["pan"]) kycData.pan = req.files["pan"][0].path;
       if (req.files["photo"]) kycData.photo = req.files["photo"][0].path;
-      if (req.files["paymentScreenshot"]) kycData.paymentScreenshot = req.files["paymentScreenshot"][0].path;
 
       // Company
       if (req.files["certificateOfIncorporation"]) kycData.certificateOfIncorporation = req.files["certificateOfIncorporation"][0].path;
@@ -109,7 +110,7 @@ bookingController.getBookingDetails = async (req, res) => {
       include: [
   { model: Space, as: "space" },
   { model: User, as: "user" },
-  { model: Kyc }  
+  { model: Kyc, as: "kyc" }  
 ]
     });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
