@@ -440,7 +440,7 @@ meetingRoomController.bookRoom = async (req, res) => {
     
     // Prepare file paths
     const bookingData = {
-      roomId: room.id,
+      meetingRoomId: room.id,
       username: userName,
       email: userEmail,
       mobile: userPhone,

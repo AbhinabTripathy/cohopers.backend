@@ -39,7 +39,6 @@ const Booking = sequelize.define("Booking", {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
-  // New column: stores screenshot path or status string
   paymentScreenshot: {
     type: DataTypes.STRING,
     allowNull: true,
