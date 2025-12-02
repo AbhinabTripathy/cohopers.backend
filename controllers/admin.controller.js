@@ -138,6 +138,7 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
         },
         {
           model: MeetingRoom,
+          as:'meetingRoom',
           attributes: ["id", "name", "capacityType"]
         }
       ],

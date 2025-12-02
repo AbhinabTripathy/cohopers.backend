@@ -226,7 +226,7 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
 
     const existingBookings = await RoomBooking.findAll({
       where: {
-        roomId: room.id,
+        meetingRoomId: room.id,
         bookingDate: date,
         status: { [Op.in]: bookedStatuses }
       }
@@ -413,7 +413,7 @@ meetingRoomController.bookRoom = async (req, res) => {
     if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
       const existingBookings = await RoomBooking.findAll({
         where: {
-          roomId: room.id,
+          meetingRoomId: room.id,
           bookingDate,
           status: "confirmed"
         }
@@ -538,8 +538,8 @@ meetingRoomController.bookRoom = async (req, res) => {
      // Update booking status based on request body
      await booking.update({ status }); 
      
-     // Get room details 
-     const room = await MeetingRoom.findByPk(booking.roomId); 
+    // Get room details 
+    const room = await MeetingRoom.findByPk(booking.meetingRoomId); 
      
      const message = status === 'confirmed' ? "Booking confirmed successfully" : "Booking cancelled successfully";
      
@@ -597,7 +597,7 @@ meetingRoomController.getAvailableDays = async (req, res) => {
 
     const bookings = await RoomBooking.findAll({
       where: {
-        roomId: room.id,
+        meetingRoomId: room.id,
         bookingDate: { [Op.between]: [startStr, endStr] },
         status: { [Op.in]: bookedStatuses }
       },
