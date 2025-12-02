@@ -3,8 +3,6 @@ const httpStatus = require('../enums/httpStatusCode.enum');
 
 const cafeteriaController = {};
 
-
-
 // Get menu items
 cafeteriaController.getMenu = async (req, res) => {
   try {
@@ -171,7 +169,7 @@ cafeteriaController.getUserOrders = async (req, res) => {
   }
 };
 
-// Admin: Get all orders
+// for Admin Get all orders
 cafeteriaController.getAllOrders = async (req, res) => {
   try {
     const orders = await CafeteriaOrder.findAll({
@@ -179,7 +177,7 @@ cafeteriaController.getAllOrders = async (req, res) => {
         {
           model: User,
           as: "user",
-          required: false, // 👈 prevents Sequelize from failing if user doesn't exist
+          required: false, // prevents Sequelize from failing if user doesn't exist
           attributes: ["id", "username", "email", "mobile"],
         },
       ],

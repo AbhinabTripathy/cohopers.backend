@@ -254,10 +254,10 @@ adminController.verifySpaceBooking = async (req, res) => {
       });
     }
 
-    if (!status || !["Confirm", "Rejected"].includes(status)) {
+    if (!status || !["Confirm", "Reject"].includes(status)) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
-        message: "Valid status (Confirm/Rejected) is required"
+        message: "Valid status (Confirm/Reject) is required"
       });
     }
 
@@ -640,10 +640,10 @@ adminController.verifyKyc = async (req, res) => {
       });
     }
 
-    if (!status || !["Approved", "Rejected"].includes(status)) {
+    if (!status || !["Approve", "Reject"].includes(status)) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
-        message: "Status must be either 'Approved' or 'Rejected'",
+        message: "Status must be either 'Approve' or 'Reject'",
       });
     }
 

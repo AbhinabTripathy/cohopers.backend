@@ -516,11 +516,11 @@ meetingRoomController.bookRoom = async (req, res) => {
        ); 
      } 
      
-     if (!status || !['confirmed', 'cancel'].includes(status)) {
+     if (!status || !['Confirm', 'Reject'].includes(status)) {
        return res.error(
          httpStatus.BAD_REQUEST,
          false,
-         "Status must be either 'confirmed' or 'cancel'"
+         "Status must be either 'Confirm' or 'Reject'"
        );
      }
      
