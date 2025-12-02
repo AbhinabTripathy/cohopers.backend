@@ -371,7 +371,7 @@ adminController.getDashboardData = async (req, res) => {
       limit: 5,
       order: [['createdAt', 'DESC']],
       include: [
-        { model: MeetingRoom, attributes: ['name'] }
+        { model: MeetingRoom, as:'meetingRoom', attributes: ['name'] }
       ]
     });
     
