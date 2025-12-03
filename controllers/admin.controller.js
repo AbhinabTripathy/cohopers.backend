@@ -154,7 +154,7 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
         bookingType: booking.bookingType, // Hourly / WholeDay
         memberType: booking.memberType,
         date: booking.bookingDate,
-        seatType: booking.MeetingRoom.capacityType,
+        seatType: booking.meetingRoom?.capacityType || null,
         slotTiming:
           booking.bookingType === "Hourly"
             ? booking.timeSlots?.join(", ")
