@@ -26,4 +26,10 @@ router.get('/past-members', adminController.getPastMembers);
 // Verify KYC
 router.put('/kyc/:id/verify', adminAuthMiddleware, adminController.verifyKyc);
 
+// Get all KYC records (with user + booking details)
+router.get('/kyc', adminController.getAllKyc);
+
+// Get single KYC record by id
+router.get('/kyc/:id', adminAuthMiddleware, adminController.getKycById);
+
 module.exports = router;

@@ -97,10 +97,17 @@ adminController.login = async (req, res) => {
     }
 
     // Generate JWT
+    const SECRET = (process.env.APP_SUPER_SECRET_KEY || '').trim();
+    if (!SECRET) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Server JWT secret is not configured'
+      });
+    }
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.APP_SUPER_SECRET_KEY,
-      { expiresIn: '7d' }
+      SECRET,
+      { expiresIn: '7d', algorithm: 'HS256' }
     );
 
     //  Return response
@@ -181,7 +188,6 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
 
 
 // Get all space bookings for admin panel
-// getAllSpaceBookings()
 adminController.getAllSpaceBookings = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
@@ -672,4 +678,86 @@ adminController.verifyKyc = async (req, res) => {
     });
   }
 };
+//get all kyc
+adminController.getAllKyc = async (req, res) => {
+  try {
+    const kycs = await Kyc.findAll({
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
+        { model: Booking, as: 'booking', attributes: ['id', 'date', 'startDate', 'endDate'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const formatted = kycs.map(k => ({
+      id: k.id,
+      type: k.type,
+      status: k.status,
+      name: k.name,
+      email: k.email,
+      mobile: k.mobile,
+      gstNumber: k.gstNumber,
+      user: k.user ? { id: k.user.id, username: k.user.username, email: k.user.email, mobile: k.user.mobile } : null,
+      booking: k.booking ? { id: k.booking.id, date: k.booking.date, startDate: k.booking.startDate, endDate: k.booking.endDate } : null,
+      createdAt: k.createdAt,
+      updatedAt: k.updatedAt
+    }));
+
+    return res.status(200).json({ success: true, message: 'KYC records fetched', data: formatted });
+  } catch (error) {
+    console.error('Error fetching KYC records:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch KYC records', error: error.message });
+  }
+};
+
+// Get single KYC record
+adminController.getKycById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: 'KYC id is required' });
+
+    const k = await Kyc.findByPk(id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
+        { model: Booking, as: 'booking' }
+      ]
+    });
+
+    if (!k) return res.status(404).json({ success: false, message: 'KYC not found' });
+
+    const payload = {
+      id: k.id,
+      type: k.type,
+      status: k.status,
+      name: k.name,
+      email: k.email,
+      mobile: k.mobile,
+      gstNumber: k.gstNumber,
+      idFront: k.idFront,
+      idBack: k.idBack,
+      pan: k.pan,
+      photo: k.photo,
+      companyName: k.companyName,
+      certificateOfIncorporation: k.certificateOfIncorporation,
+      companyPAN: k.companyPAN,
+      directorName: k.directorName,
+      din: k.din,
+      directorPAN: k.directorPAN,
+      directorPhoto: k.directorPhoto,
+      directorIdFront: k.directorIdFront,
+      directorIdBack: k.directorIdBack,
+      directorPaymentProof: k.directorPaymentProof,
+      user: k.user ? { id: k.user.id, username: k.user.username, email: k.user.email, mobile: k.user.mobile } : null,
+      booking: k.booking || null,
+      createdAt: k.createdAt,
+      updatedAt: k.updatedAt
+    };
+
+    return res.status(200).json({ success: true, message: 'KYC record fetched', data: payload });
+  } catch (error) {
+    console.error('Error fetching KYC by id:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch KYC', error: error.message });
+  }
+};
+
 module.exports = adminController;
