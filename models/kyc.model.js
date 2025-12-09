@@ -41,7 +41,7 @@ const Kyc = sequelize.define('Kyc',{
 
   // Approval status
   status: {
-    type: DataTypes.ENUM("Pending", "Approved", "Rejected"),
+    type: DataTypes.ENUM("Pending", "Approve", "Reject"),
     allowNull: false,
     defaultValue: "Pending",
   },

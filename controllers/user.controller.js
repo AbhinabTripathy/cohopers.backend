@@ -114,7 +114,7 @@ userController.login = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    if (!userKyc || userKyc.status !== "Approved") {
+    if (!userKyc || userKyc.status !== "Approve") {
       return res.error(
         httpStatus.FORBIDDEN,
         false,

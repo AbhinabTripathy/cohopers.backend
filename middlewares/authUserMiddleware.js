@@ -12,7 +12,8 @@ module.exports = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.APP_SUPER_SECRET_KEY);
+    const SECRET = (process.env.APP_SUPER_SECRET_KEY || '').trim();
+    const decoded = jwt.verify(token, SECRET);
 
     // attach full user to request
     const user = await User.findByPk(decoded.id);

@@ -65,72 +65,65 @@ adminController.registerAdmin = async (req, res) => {
 };
 
 
-//login for admin....................................
+// login controller for admin
 adminController.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(HttpStatus.BAD_REQUEST).json({
+      return res.status(400).json({
         success: false,
-        message: 'Email and password are required',
+        message: "Email and password are required"
       });
     }
 
-    // Find user (admin or normal)
     const user = await User.findOne({ where: { email } });
 
-    if (!user) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
+    if (!user || user.role !== "admin") {
+      return res.status(401).json({
         success: false,
-        message: 'User not found',
+        message: "Admin user not found or unauthorized"
       });
     }
 
-    // Compare password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({
+      return res.status(401).json({
         success: false,
-        message: 'Invalid password',
+        message: "Invalid password"
       });
     }
 
-    // Generate JWT
-    const SECRET = (process.env.APP_SUPER_SECRET_KEY || '').trim();
+    // Use the same trimmed secret used across the app. Fall back to TOKEN_SECRET if set.
+    const SECRET = (process.env.APP_SUPER_SECRET_KEY || process.env.TOKEN_SECRET || '').trim();
     if (!SECRET) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: 'Server JWT secret is not configured'
       });
     }
+
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: "admin" },
       SECRET,
-      { expiresIn: '7d', algorithm: 'HS256' }
+      { expiresIn: "7d", algorithm: 'HS256' }
     );
 
-    //  Return response
-    return res.status(HttpStatus.OK).json({
+    return res.status(200).json({
       success: true,
-      message: `${user.role === 'admin' ? 'Admin' : 'User'} login successful`,
-      data: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        token
-      }
+      message: "Admin login successful",
+      data: { token }
     });
+
   } catch (error) {
-    console.error('Error during login:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+    console.error("Admin Login Error:", error.message);
+    return res.status(500).json({
       success: false,
-      message: 'Error during login',
-      error: error.message,
+      message: "Internal server error"
     });
   }
 };
+
 
 
 // Get all meeting room bookings for admin panel
@@ -634,7 +627,6 @@ adminController.getPastMembers = async (req, res) => {
   }
 };
 
-
 adminController.verifyKyc = async (req, res) => {
   try {
     const { id } = req.params;
@@ -678,6 +670,7 @@ adminController.verifyKyc = async (req, res) => {
     });
   }
 };
+
 //get all kyc
 adminController.getAllKyc = async (req, res) => {
   try {
@@ -691,12 +684,35 @@ adminController.getAllKyc = async (req, res) => {
 
     const formatted = kycs.map(k => ({
       id: k.id,
+      userId: k.userId || (k.user ? k.user.id : null),
+      bookingId: k.bookingId || (k.booking ? k.booking.id : null),
       type: k.type,
-      status: k.status,
       name: k.name,
       email: k.email,
       mobile: k.mobile,
       gstNumber: k.gstNumber,
+
+      // Freelancer fields
+      idFront: k.idFront,
+      idBack: k.idBack,
+      pan: k.pan,
+      photo: k.photo,
+
+      // Company fields
+      companyName: k.companyName,
+      certificateOfIncorporation: k.certificateOfIncorporation,
+      companyPAN: k.companyPAN,
+
+      // Director fields
+      directorName: k.directorName,
+      din: k.din,
+      directorPAN: k.directorPAN,
+      directorPhoto: k.directorPhoto,
+      directorIdFront: k.directorIdFront,
+      directorIdBack: k.directorIdBack,
+      directorPaymentProof: k.directorPaymentProof,
+
+      status: k.status,
       user: k.user ? { id: k.user.id, username: k.user.username, email: k.user.email, mobile: k.user.mobile } : null,
       booking: k.booking ? { id: k.booking.id, date: k.booking.date, startDate: k.booking.startDate, endDate: k.booking.endDate } : null,
       createdAt: k.createdAt,

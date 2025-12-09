@@ -59,7 +59,7 @@ async function startServer() {
     console.log("Database connection establish successfully");
 
     //for any schema changes
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log('All models were synchronized successfully.');
 
     // Now run the seeders after tables are created
