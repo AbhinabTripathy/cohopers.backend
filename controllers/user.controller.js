@@ -89,6 +89,7 @@ userController.register = async (req, res) => {
         );
     }
 };
+
 // User login 
 userController.login = async (req, res) => { 
   try { 
@@ -166,7 +167,6 @@ userController.login = async (req, res) => {
     return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Error during login", error);
   }
 };
-
 
 // Get user's membership details
 userController.getMembershipDetails = async (req, res) => {

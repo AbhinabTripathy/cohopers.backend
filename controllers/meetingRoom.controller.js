@@ -501,7 +501,6 @@ meetingRoomController.bookRoom = async (req, res) => {
   }
 };
 
-
 //  for admin to verify bookings 
  meetingRoomController.verifyBooking = async (req, res) => { 
    try { 

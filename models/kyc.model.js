@@ -57,7 +57,7 @@ const Kyc = sequelize.define('Kyc',{
   },
   bookingId: {
     type: DataTypes.INTEGER,
-    allowNull: true, // Temporarily allow null for migration
+    allowNull: true, 
   }
 },
 {

@@ -8,7 +8,6 @@ const inventoryController = {};
 // Middleware for handling space image uploads
 inventoryController.uploadSpaceImages = upload('spaces').array('spaceImages', 5);
 
-
 // Add new space
 inventoryController.addSpace = async (req, res, next) => {
   try {
@@ -82,7 +81,6 @@ inventoryController.addSpace = async (req, res, next) => {
     next(error);
   }
 };
-
 
 // Get all spaces
 inventoryController.getAllSpaces = async (req, res, next) => {
@@ -296,7 +294,6 @@ inventoryController.addTeamMember = async (req, res) => {
   }
 };
 
-
 // Get all team members for a booking
 inventoryController.getTeamMembers = async (req, res, next) => {
   try {
@@ -405,7 +402,6 @@ inventoryController.deleteTeamMember = async (req, res, next) => {
     next(error);
   }
 };
-
 
 // Admin endpoint to get all team members across all bookings
 inventoryController.getAllTeamMembers = async (req, res, next) => {

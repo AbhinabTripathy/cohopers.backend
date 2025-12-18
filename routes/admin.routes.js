@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
-const adminAuthMiddleware = require('../middlewares/authAdminMiddleware'); 
+const adminAuthMiddleware = require('../middlewares/authAdminMiddleware');
+const upload = require('../middlewares/upload.middleware');
 
 //admin register 
 router.post('/register-admin', adminController.registerAdmin);
-
 
 //admin login
 router.post('/login', adminController.login);
@@ -31,5 +31,10 @@ router.get('/kyc', adminController.getAllKyc);
 
 // Get single KYC record by id
 router.get('/kyc/:id', adminAuthMiddleware, adminController.getKycById);
+
+// Notice period endpoints
+router.post('/booking/:id/submit-notice', adminAuthMiddleware, upload('notice-pdfs').single('noticePdf'), adminController.submitNotice);
+router.get('/bookings/pending-notice', adminAuthMiddleware, adminController.getBookingsPendingNotice);
+router.get('/bookings/active-notice', adminAuthMiddleware, adminController.getNoticeActiveBookings);
 
 module.exports = router;

@@ -1,5 +1,4 @@
 const { ZohoBooksService } = require('../config/zoho.config');
-
 const zohoService = new ZohoBooksService();
 
 // Get all invoices

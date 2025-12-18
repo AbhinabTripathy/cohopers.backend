@@ -221,7 +221,6 @@ cafeteriaController.testGetAllOrders = async (req, res) => {
   }
 };
 
-
 // Admin: Update order status
 cafeteriaController.updateOrderStatus = async (req, res) => {
   try {

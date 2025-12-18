@@ -4,6 +4,7 @@ const { User, MeetingRoom, roomBooking, Space, Booking, Kyc } = require('../mode
 const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
 const sendMail = require("../utils/helper")
+const { getNoticeStatus } = require('../utils/noticeHelper');
 
 
 
@@ -198,7 +199,6 @@ adminController.getAllSpaceBookings = async (req, res) => {
         {
           model: Kyc,
           as: "kyc",
-          // Remove invalid attribute; KYC does not have paymentScreenshot
           attributes: { exclude: ["createdAt", "updatedAt"] }
         }
       ],
@@ -221,7 +221,6 @@ adminController.getAllSpaceBookings = async (req, res) => {
       endDate: booking.endDate,
       amount: booking.amount,
       status: booking.status,
-      // Fix: read from booking, not kyc
       paymentScreenshot: booking.paymentScreenshot
     }));
 
@@ -276,7 +275,6 @@ adminController.verifySpaceBooking = async (req, res) => {
         {
           model:Kyc,
           as: "kyc",
-          // Remove invalid attribute; KYC does not have paymentScreenshot
           attributes: { exclude: ["createdAt", "updatedAt"] }
         }
       ]
@@ -467,7 +465,6 @@ adminController.getDashboardData = async (req, res) => {
          {
            model: Kyc,
            as: "kyc",
-           // Include all KYC fields
            attributes: { exclude: ['createdAt', 'updatedAt'] }
          }
        ],
@@ -487,7 +484,6 @@ adminController.getDashboardData = async (req, res) => {
          unit: booking.space.seater,
          amount: booking.amount,
          email: booking.user.email,
-         // Add screenshot at top-level from booking
          paymentScreenshot: booking.paymentScreenshot,
          details: {
            id: booking.id,
@@ -513,8 +509,6 @@ adminController.getDashboardData = async (req, res) => {
           idBack: booking.kyc.idBack,
           pan: booking.kyc.pan,
           photo: booking.kyc.photo,
-          // Remove: KYC does not have this field
-          // paymentScreenshot: booking.kyc.paymentScreenshot,
           // Company fields
           companyName: booking.kyc.companyName,
           certificateOfIncorporation: booking.kyc.certificateOfIncorporation,
@@ -577,7 +571,7 @@ adminController.getPastMembers = async (req, res) => {
           attributes: ['id', 'type', 'name', 'email', 'mobile', 'gstNumber']
         }
       ],
-      order: [['endDate', 'DESC']]  // Most recently ended first
+      order: [['endDate', 'DESC']]  
     });
 
     // Format the data 
@@ -670,7 +664,6 @@ adminController.verifyKyc = async (req, res) => {
     });
   }
 };
-
 //get all kyc
 adminController.getAllKyc = async (req, res) => {
   try {
@@ -773,6 +766,134 @@ adminController.getKycById = async (req, res) => {
   } catch (error) {
     console.error('Error fetching KYC by id:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch KYC', error: error.message });
+  }
+};
+
+adminController.submitNotice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { noticePeriodDays } = req.body;
+    if (!id) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Booking ID is required' });
+    }
+    const booking = await Booking.findByPk(id, { include: [{ model: Space, as: 'space' }, { model: User, as: 'user' }] });
+    if (!booking) {
+      return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Booking not found' });
+    }
+    if (!req.file) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Notice PDF is required' });
+    }
+    if (booking.status !== 'Confirm' && booking.status !== 'Notice Given') {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Only confirmed bookings can submit notice' });
+    }
+    const days = Number(noticePeriodDays) > 0 ? Math.min(Number(noticePeriodDays), 365) : 30;
+    booking.noticePdfPath = `/uploads/notice-pdfs/${req.file.filename}`;
+    booking.noticeGiven = true;
+    booking.status = 'Notice Given';
+    booking.noticeSubmittedDate = new Date();
+    booking.noticePeriodDays = days;
+    await booking.save();
+    if (booking.space) {
+      booking.space.availability = 'Available Soon';
+      await booking.space.save();
+    }
+    const status = getNoticeStatus(booking);
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      message: 'Notice submitted successfully',
+      data: {
+        bookingId: booking.id,
+        userId: booking.userId,
+        spaceId: booking.spaceId,
+        noticePeriodDays: booking.noticePeriodDays,
+        noticePdfPath: booking.noticePdfPath,
+        noticeSubmittedDate: booking.noticeSubmittedDate,
+        status
+      }
+    });
+  } catch (error) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to submit notice',
+      error: error.message
+    });
+  }
+};
+
+adminController.getBookingsPendingNotice = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({
+      where: { status: 'Confirm', noticeGiven: false },
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
+        { model: Space, as: 'space', attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    const data = bookings.map(b => ({
+      id: b.id,
+      userId: b.userId,
+      userName: b.user?.username || null,
+      email: b.user?.email || null,
+      mobile: b.user?.mobile || null,
+      spaceId: b.spaceId,
+      spaceName: b.space?.space_name || null,
+      roomNumber: b.space?.roomNumber || null,
+      cabinNumber: b.space?.cabinNumber || null,
+      seater: b.space?.seater || null,
+      startDate: b.startDate,
+      endDate: b.endDate,
+      amount: b.amount,
+      status: b.status
+    }));
+    return res.status(HttpStatus.OK).json({ success: true, data });
+  } catch (error) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to fetch pending notices',
+      error: error.message
+    });
+  }
+};
+
+adminController.getNoticeActiveBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({
+      where: { status: 'Notice Given' },
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
+        { model: Space, as: 'space', attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'availability'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    const data = bookings.map(b => {
+      const s = getNoticeStatus(b);
+      return {
+        id: b.id,
+        userId: b.userId,
+        userName: b.user?.username || null,
+        email: b.user?.email || null,
+        mobile: b.user?.mobile || null,
+        spaceId: b.spaceId,
+        spaceName: b.space?.space_name || null,
+        roomNumber: b.space?.roomNumber || null,
+        cabinNumber: b.space?.cabinNumber || null,
+        seater: b.space?.seater || null,
+        availability: b.space?.availability || null,
+        noticePeriodDays: b.noticePeriodDays,
+        noticeSubmittedDate: b.noticeSubmittedDate,
+        daysRemaining: s.daysRemaining,
+        expireDate: s.expireDate,
+        isInNotice: s.isInNotice
+      };
+    });
+    return res.status(HttpStatus.OK).json({ success: true, data });
+  } catch (error) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Failed to fetch active notices',
+      error: error.message
+    });
   }
 };
 

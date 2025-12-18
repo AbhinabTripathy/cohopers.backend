@@ -44,8 +44,30 @@ const Booking = sequelize.define("Booking", {
     allowNull: true,
   },
   status: {
-    type: DataTypes.ENUM("Pending", "Confirm", "Rejected"),
+    type: DataTypes.ENUM("Pending", "Confirm", "Rejected", "Notice Given"),
     defaultValue: "Pending",
+  },
+  //  For notice period 
+  noticeGiven: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  noticeSubmittedDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
+  noticePeriodDays: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 30,
+    validate: {
+      min: 1,
+      max: 365,
+    },
+  },
+  noticePdfPath: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
 }, {
   tableName: "bookings",
