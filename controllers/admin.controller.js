@@ -220,6 +220,8 @@ adminController.getAllSpaceBookings = async (req, res) => {
       startDate: booking.startDate,
       endDate: booking.endDate,
       amount: booking.amount,
+      originalAmount: booking.originalAmount,
+      negotiatedAmount: booking.negotiatedAmount,
       status: booking.status,
       paymentScreenshot: booking.paymentScreenshot
     }));
@@ -244,7 +246,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
 adminController.verifySpaceBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, finalAmount } = req.body;
 
     if (!id) {
       return res.status(HttpStatus.BAD_REQUEST).json({
@@ -287,6 +289,18 @@ adminController.verifySpaceBooking = async (req, res) => {
       });
     }
 
+    if (status === "Confirm" && finalAmount !== undefined) {
+      const amt = Number(finalAmount);
+      if (!Number.isFinite(amt) || amt <= 0) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          message: "finalAmount must be a positive number"
+        });
+      }
+      booking.negotiatedAmount = amt;
+      booking.amount = amt;
+      if (remarks) booking.negotiationRemarks = remarks;
+    }
     booking.status = status;
     await booking.save();
 
@@ -305,11 +319,13 @@ adminController.verifySpaceBooking = async (req, res) => {
         <li>Start Date: ${booking.startDate}</li>
         <li>End Date: ${booking.endDate}</li>
         <li>Amount: ${booking.amount}</li>
+        ${booking.originalAmount ? `<li>Listed Amount: ${booking.originalAmount}</li>` : ''}
+        ${booking.negotiatedAmount ? `<li>Negotiated Amount: ${booking.negotiatedAmount}</li>` : ''}
       </ul>
       <p>Thank you for choosing CoHopers!</p>
     `;
 
-    await sendMail(emailSubject, emailMessage);
+    await sendMail(booking.user?.email || process.env.ADMIN_EMAIL, emailSubject, emailMessage);
 
     res.status(HttpStatus.OK).json({
       success: true,
@@ -455,7 +471,14 @@ adminController.getDashboardData = async (req, res) => {
          {
            model: User,
            as: 'user',
-           attributes: ['id', 'username', 'email', 'mobile']
+           attributes: ['id', 'username', 'email', 'mobile'],
+           include: [
+             {
+               model: Kyc,
+               as: 'kyc',
+               attributes: { exclude: ['createdAt', 'updatedAt'] }
+             }
+           ]
          },
          {
            model: Space,
@@ -495,33 +518,34 @@ adminController.getDashboardData = async (req, res) => {
            amount: booking.amount,
            status: booking.status
          },
-        kycDetails: booking.kyc ? {
-          // Include all KYC fields
-          id: booking.kyc.id,
-          bookingId: booking.kyc.bookingId,
-          documentType: booking.kyc.type,
-          name: booking.kyc.name,
-          email: booking.kyc.email,
-          mobile: booking.kyc.mobile,
-          gstNumber: booking.kyc.gstNumber,
-          // Freelancer fields
-          idFront: booking.kyc.idFront,
-          idBack: booking.kyc.idBack,
-          pan: booking.kyc.pan,
-          photo: booking.kyc.photo,
-          // Company fields
-          companyName: booking.kyc.companyName,
-          certificateOfIncorporation: booking.kyc.certificateOfIncorporation,
-          companyPAN: booking.kyc.companyPAN,
-          directorName: booking.kyc.directorName,
-          din: booking.kyc.din,
-          // Director KYC fields
-          directorPAN: booking.kyc.directorPAN,
-          directorPhoto: booking.kyc.directorPhoto,
-          directorIdFront: booking.kyc.directorIdFront,
-          directorIdBack: booking.kyc.directorIdBack,
-          directorPaymentProof: booking.kyc.directorPaymentProof
-        } : null
+        // Prefer booking-level KYC; fallback to user's KYC when booking KYC is absent
+        kycDetails: (booking.kyc || booking.user?.kyc) ? (() => {
+          const k = booking.kyc || booking.user?.kyc;
+          return {
+            id: k.id,
+            bookingId: k.bookingId || null,
+            documentType: k.type,
+            name: k.name,
+            email: k.email,
+            mobile: k.mobile,
+            gstNumber: k.gstNumber,
+            idFront: k.idFront,
+            idBack: k.idBack,
+            pan: k.pan,
+            photo: k.photo,
+            companyName: k.companyName,
+            certificateOfIncorporation: k.certificateOfIncorporation,
+            companyPAN: k.companyPAN,
+            directorName: k.directorName,
+            din: k.din,
+            directorPAN: k.directorPAN,
+            directorPhoto: k.directorPhoto,
+            directorIdFront: k.directorIdFront,
+            directorIdBack: k.directorIdBack,
+            directorPaymentProof: k.directorPaymentProof,
+            status: k.status
+          };
+        })() : null
        };
      });
  

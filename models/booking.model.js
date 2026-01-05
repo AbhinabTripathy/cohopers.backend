@@ -39,6 +39,18 @@ const Booking = sequelize.define("Booking", {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  originalAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
+  negotiatedAmount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
+  negotiationRemarks: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   paymentScreenshot: {
     type: DataTypes.STRING,
     allowNull: true,

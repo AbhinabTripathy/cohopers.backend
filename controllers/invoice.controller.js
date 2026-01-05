@@ -43,7 +43,7 @@ exports.getInvoiceById = async (req, res) => {
 exports.sendInvoiceEmail = async (req, res) => {
   try {
     const { id } = req.params;
-    const emailData = req.body; // Expects { to_mail_ids: [...], subject: ..., body: ... }
+    const emailData = req.body; 
     const result = await zohoService.sendInvoiceEmail(id, emailData);
     res.success(result, 'Invoice sent successfully');
   } catch (error) {

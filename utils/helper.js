@@ -1,27 +1,41 @@
 const nodemailer = require("nodemailer");
 
+const host = (process.env.SMTP_HOST || "").trim();
+const port = Number((process.env.SMTP_PORT || "").trim() || 465);
+const user = ((process.env.ADMIN_EMAIL || process.env.SMTP_USER) || "").trim();
+const pass = ((process.env.ADMIN_PASS || process.env.SMTP_PASS) || "").trim();
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: true, // true for 465
-  auth: {
-    user: process.env.ADMIN_EMAIL,
-    pass: process.env.ADMIN_PASS,
-  },
+  host,
+  port,
+  secure: port === 465,
+  requireTLS: port !== 465,
+  auth: { user, pass },
 });
 
-async function sendAdminNotification(subject, message) {
+transporter.verify((err) => {
+  if (err) console.error("SMTP Error:", err.message);
+  else console.log("Zoho SMTP Connected Successfully");
+});
+
+async function sendMail(to, subject, html, options = {}) {
   try {
-    await transporter.sendMail({
-      from: `"CoHopers" <${process.env.ADMIN_EMAIL}>`,
-      to: process.env.ADMIN_EMAIL, // send to admin itself
+    if (!user || !pass || !host || !port) {
+      throw new Error("SMTP is not fully configured");
+    }
+    const mailOptions = {
+      from: `"CoHopers" <${user}>`,
+      to: to || user,
       subject,
-      html: `<p>${message}</p>`,
-    });
-    console.log("Mail sent via Zoho!");
+      html,
+      ...options,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log("Mail sent successfully");
   } catch (error) {
-    console.error("Mail send error:", error);
+    console.error("Mail send error:", error.message);
   }
 }
 
-module.exports = sendAdminNotification;
+module.exports = sendMail;

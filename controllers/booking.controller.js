@@ -17,6 +17,7 @@ bookingController.createBooking = async (req, res) => {
       startDate,
       endDate,
       amount,
+      originalAmount: amount,
       status: "Pending"
     });
     
@@ -67,6 +68,13 @@ bookingController.submitKyc = async (req, res) => {
       directorName,
       din,
     };
+
+    // If a bookingId is provided, ensure the booking exists and associate it
+    if (bookingId) {
+      const bookingExists = await Booking.findByPk(bookingId);
+      if (!bookingExists) return res.status(404).json({ message: "Booking not found" });
+      kycData.bookingId = bookingId;
+    }
 
     // Handle file uploads
     if (req.files) {
