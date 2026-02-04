@@ -24,7 +24,7 @@ const Space = sequelize.define('Space', {
     allowNull: true
   },
   price: {
-    type: DataTypes.DECIMAL(10, 2),
+    type: DataTypes.CHAR,
     allowNull: false
   },
   gst: {

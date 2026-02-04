@@ -39,6 +39,9 @@ teamMember.belongsTo(Booking, { foreignKey: "bookingId", as: "booking" });
 //  Cafeteria Orders
 User.hasMany(CafeteriaOrder, { foreignKey: "userId", as: 'orders', onDelete: "CASCADE" });
 CafeteriaOrder.belongsTo(User, { foreignKey: "userId", as: 'user' });
+//  Link orders to space
+Space.hasMany(CafeteriaOrder, { foreignKey: "spaceId", as: 'spaceOrders', onDelete: "SET NULL" });
+CafeteriaOrder.belongsTo(Space, { foreignKey: "spaceId", as: 'space' });
 
 
 //  Meeting Room & Room Booking

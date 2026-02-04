@@ -1,5 +1,6 @@
-const { CafeteriaOrder, User } = require('../models');
+const { CafeteriaOrder, User, Booking, Space } = require('../models');
 const httpStatus = require('../enums/httpStatusCode.enum');
+const { Op } = require('sequelize');
 
 const cafeteriaController = {};
 
@@ -66,6 +67,33 @@ cafeteriaController.placeOrder = async (req, res) => {
     let createdOrders = [];
     let totalAmount = 0;
 
+    const tzAdjusted = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000));
+    const today = tzAdjusted.toISOString().slice(0, 10);
+
+    let currentSpaceId = req.body.spaceId ? Number(req.body.spaceId) : null;
+
+    if (!currentSpaceId) {
+      const activeBooking = await Booking.findOne({
+        where: {
+          userId,
+          status: "Confirm",
+          startDate: { [Op.lte]: today },
+          endDate: { [Op.gte]: today }
+        },
+        order: [["startDate", "DESC"]]
+      });
+
+      if (activeBooking) {
+        currentSpaceId = activeBooking.spaceId;
+      } else {
+        const latestBooking = await Booking.findOne({
+          where: { userId, status: "Confirm" },
+          order: [["endDate", "DESC"]]
+        });
+        currentSpaceId = latestBooking ? latestBooking.spaceId : null;
+      }
+    }
+
     // Process each order item
     for (const item of orders) {
       const { orderType, itemName, quantity } = item;
@@ -112,6 +140,7 @@ cafeteriaController.placeOrder = async (req, res) => {
       // Create order record
       const order = await CafeteriaOrder.create({
         userId,
+        spaceId: currentSpaceId,
         orderType,
         itemName,
         quantity,
@@ -177,17 +206,36 @@ cafeteriaController.getAllOrders = async (req, res) => {
         {
           model: User,
           as: "user",
-          required: false, // prevents Sequelize from failing if user doesn't exist
+          required: false,
           attributes: ["id", "username", "email", "mobile"],
         },
+        {
+          model: Space,
+          as: "space",
+          attributes: ["id","space_name","roomNumber","cabinNumber","seater"]
+        }
       ],
       order: [["createdAt", "DESC"]],
+    });
+
+    const enhanced = orders.map(o => {
+      const obj = o.toJSON();
+      const s = obj.space;
+      obj.orderFrom = s ? {
+        roomNumber: s.roomNumber,
+        cabinNumber: s.cabinNumber,
+        spaceName: s.space_name,
+        seater: s.seater,
+       
+      } : null;
+      delete obj.space;
+      return obj;
     });
 
     return res.status(httpStatus.OK).json({
       success: true,
       message: "All orders fetched successfully",
-      data: orders,
+      data: enhanced,
     });
   } catch (error) {
     console.error("Error fetching all orders:", error);

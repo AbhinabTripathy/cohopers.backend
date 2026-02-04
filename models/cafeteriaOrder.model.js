@@ -55,6 +55,14 @@ const CafeteriaOrder = sequelize.define(
       type: DataTypes.ENUM("Pending", "Confirmed", "Delivered", "Cancelled"),
       defaultValue: "Pending",
     },
+    spaceId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "spaces",
+        key: "id",
+      },
+    },
   },
   {
     tableName: "cafeteria_orders",

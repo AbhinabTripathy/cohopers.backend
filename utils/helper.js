@@ -1,31 +1,28 @@
 const nodemailer = require("nodemailer");
 
-const host = (process.env.SMTP_HOST || "").trim();
-const port = Number((process.env.SMTP_PORT || "").trim() || 465);
-const user = ((process.env.ADMIN_EMAIL || process.env.SMTP_USER) || "").trim();
-const pass = ((process.env.ADMIN_PASS || process.env.SMTP_PASS) || "").trim();
-
 const transporter = nodemailer.createTransport({
-  host,
-  port,
-  secure: port === 465,
-  requireTLS: port !== 465,
-  auth: { user, pass },
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
-transporter.verify((err) => {
-  if (err) console.error("SMTP Error:", err.message);
-  else console.log("Zoho SMTP Connected Successfully");
+transporter.verify((err, success) => {
+  if (err) {
+    console.error("SMTP Error:", err.message);
+  } else {
+    console.log("Zoho SMTP Connected Successfully");
+  }
 });
 
 async function sendMail(to, subject, html, options = {}) {
   try {
-    if (!user || !pass || !host || !port) {
-      throw new Error("SMTP is not fully configured");
-    }
     const mailOptions = {
-      from: `"CoHopers" <${user}>`,
-      to: to || user,
+      from: `"CoHopers" <${process.env.ADMIN_EMAIL}>`,
+      to,
       subject,
       html,
       ...options,
