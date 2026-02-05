@@ -468,22 +468,25 @@ adminController.getDashboardData = async (req, res) => {
          status: 'Confirm'
        },
        include: [
-         {
-           model: User,
-           as: 'user',
-           attributes: ['id', 'username', 'email', 'mobile']
-         },
-         {
-           model: Space,
-           as: 'space',
-           attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
-         },
-         {
-           model: Kyc,
-           as: "kyc",
-           attributes: { exclude: ['createdAt', 'updatedAt'] }
-         }
-       ],
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email', 'mobile'],
+          include: [
+            {
+              model: Kyc,
+              as: 'kyc',
+              attributes: { exclude: ['createdAt', 'updatedAt'] }
+            }
+          ]
+        },
+        {
+          model: Space,
+          as: 'space',
+          attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
+        },
+        
+      ],
        order: [['id', 'ASC']]
      });
  
@@ -511,33 +514,32 @@ adminController.getDashboardData = async (req, res) => {
            amount: booking.amount,
            status: booking.status
          },
-        kycDetails: booking.kyc ? {
-          // Include all KYC fields
-          id: booking.kyc.id,
-          bookingId: booking.kyc.bookingId,
-          documentType: booking.kyc.type,
-          name: booking.kyc.name,
-          email: booking.kyc.email,
-          mobile: booking.kyc.mobile,
-          gstNumber: booking.kyc.gstNumber,
-          // Freelancer fields
-          idFront: booking.kyc.idFront,
-          idBack: booking.kyc.idBack,
-          pan: booking.kyc.pan,
-          photo: booking.kyc.photo,
-          // Company fields
-          companyName: booking.kyc.companyName,
-          certificateOfIncorporation: booking.kyc.certificateOfIncorporation,
-          companyPAN: booking.kyc.companyPAN,
-          directorName: booking.kyc.directorName,
-          din: booking.kyc.din,
-          // Director KYC fields
-          directorPAN: booking.kyc.directorPAN,
-          directorPhoto: booking.kyc.directorPhoto,
-          directorIdFront: booking.kyc.directorIdFront,
-          directorIdBack: booking.kyc.directorIdBack,
-          directorPaymentProof: booking.kyc.directorPaymentProof
-        } : null
+         kycDetails: (() => {
+          const k = booking.kyc || (booking.user && booking.user.kyc);
+          return k ? {
+            id: k.id,
+            bookingId: k.bookingId,
+            documentType: k.type,
+            name: k.name,
+            email: k.email,
+            mobile: k.mobile,
+            gstNumber: k.gstNumber,
+            idFront: k.idFront,
+            idBack: k.idBack,
+            pan: k.pan,
+            photo: k.photo,
+            companyName: k.companyName,
+            certificateOfIncorporation: k.certificateOfIncorporation,
+            companyPAN: k.companyPAN,
+            directorName: k.directorName,
+            din: k.din,
+            directorPAN: k.directorPAN,
+            directorPhoto: k.directorPhoto,
+            directorIdFront: k.directorIdFront,
+            directorIdBack: k.directorIdBack,
+            directorPaymentProof: k.directorPaymentProof
+          } : null;
+        })()
        };
      });
  
