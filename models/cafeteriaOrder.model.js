@@ -63,6 +63,11 @@ const CafeteriaOrder = sequelize.define(
         key: "id",
       },
     },
+    isPersonal: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     tableName: "cafeteria_orders",

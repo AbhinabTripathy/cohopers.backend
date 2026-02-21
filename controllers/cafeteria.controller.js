@@ -39,7 +39,7 @@ cafeteriaController.getMenu = async (req, res) => {
 cafeteriaController.placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-    let { orders, specialInstructions, utrNumber } = req.body;
+    let { orders, specialInstructions, utrNumber, isPersonal } = req.body;
 
     // Parse orders if it's a string 
     if (typeof orders === "string") {
@@ -151,7 +151,8 @@ cafeteriaController.placeOrder = async (req, res) => {
         paymentScreenshot: req.file
           ? `/uploads/cafeteria/${req.file.filename}`
           : null,
-        status: "Pending"
+        status: "Pending",
+        isPersonal: isPersonal === true // Treat as personal if explicitly true
       });
 
       createdOrders.push(order);
