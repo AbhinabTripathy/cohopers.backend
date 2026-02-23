@@ -1,4 +1,4 @@
-const { CafeteriaOrder, User, Booking, Space } = require('../models');
+const { CafeteriaOrder, User, Booking, Space, Kyc } = require('../models');
 const httpStatus = require('../enums/httpStatusCode.enum');
 const { Op } = require('sequelize');
 
@@ -94,6 +94,10 @@ cafeteriaController.placeOrder = async (req, res) => {
       }
     }
 
+    // Retrieve the KYC ID for the user
+    const kycRecord = await Kyc.findOne({ where: { userId } });
+    const kycId = kycRecord ? kycRecord.id : null;
+
     // Process each order item
     for (const item of orders) {
       const { orderType, itemName, quantity } = item;
@@ -152,7 +156,8 @@ cafeteriaController.placeOrder = async (req, res) => {
           ? `/uploads/cafeteria/${req.file.filename}`
           : null,
         status: "Pending",
-        isPersonal: isPersonal === true // Treat as personal if explicitly true
+        isPersonal: isPersonal === "true" || isPersonal === true, // Treat as personal if explicitly true
+        kycId, // Include the KYC ID
       });
 
       createdOrders.push(order);
@@ -206,43 +211,33 @@ cafeteriaController.getAllOrders = async (req, res) => {
       include: [
         {
           model: User,
-          as: "user",
-          required: false,
+          as: "user", 
           attributes: ["id", "username", "email", "mobile"],
         },
         {
           model: Space,
-          as: "space",
-          attributes: ["id","space_name","roomNumber","cabinNumber","seater"]
-        }
+          as: "space", 
+          attributes: ["roomNumber", "cabinNumber", "spaceName", "seater"],
+        },
+        {
+          model: Kyc,
+          as: "kyc", 
+          attributes: ["companyName"], 
+          required: false,
+        },
       ],
-      order: [["createdAt", "DESC"]],
     });
 
-    const enhanced = orders.map(o => {
-      const obj = o.toJSON();
-      const s = obj.space;
-      obj.orderFrom = s ? {
-        roomNumber: s.roomNumber,
-        cabinNumber: s.cabinNumber,
-        spaceName: s.space_name,
-        seater: s.seater,
-       
-      } : null;
-      delete obj.space;
-      return obj;
-    });
-
-    return res.status(httpStatus.OK).json({
+    return res.status(200).json({
       success: true,
       message: "All orders fetched successfully",
-      data: enhanced,
+      data: orders,
     });
   } catch (error) {
-    console.error("Error fetching all orders:", error);
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+    console.error("Error fetching orders:", error);
+    return res.status(500).json({
       success: false,
-      message: "Failed to fetch all orders",
+      message: "Failed to fetch orders",
       error: error.message,
     });
   }

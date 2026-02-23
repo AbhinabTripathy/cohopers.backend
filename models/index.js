@@ -42,7 +42,9 @@ CafeteriaOrder.belongsTo(User, { foreignKey: "userId", as: 'user' });
 //  Link orders to space
 Space.hasMany(CafeteriaOrder, { foreignKey: "spaceId", as: 'spaceOrders', onDelete: "SET NULL" });
 CafeteriaOrder.belongsTo(Space, { foreignKey: "spaceId", as: 'space' });
-
+// Associate Kyc with CafeteriaOrder
+Kyc.hasMany(CafeteriaOrder, { foreignKey: "kycId", as: "kycOrders", onDelete: "SET NULL" });
+CafeteriaOrder.belongsTo(Kyc, { foreignKey: "kycId", as: "kyc" });
 
 //  Meeting Room & Room Booking
 MeetingRoom.hasMany(roomBooking, { foreignKey: "meetingRoomId", as: "bookings", onDelete: "CASCADE" });

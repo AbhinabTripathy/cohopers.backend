@@ -15,7 +15,7 @@ const Space = sequelize.define('Space', {
     type:DataTypes.CHAR,
     allowNull:false
   },
-  space_name: {   // Executive Cabin, Private Cabin, etc
+  spaceName: {   // Executive Cabin, Private Cabin, etc
     type: DataTypes.STRING,
     allowNull: true,
   },
