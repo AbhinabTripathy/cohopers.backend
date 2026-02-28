@@ -130,7 +130,7 @@ userController.login = async (req, res) => {
         {
           model: require("../models/space.model"),
           as: "space",
-          attributes: ["id", "space_name", "roomNumber", "cabinNumber"],
+          attributes: ["id", "spaceName", "roomNumber", "cabinNumber"],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -139,7 +139,7 @@ userController.login = async (req, res) => {
     const occupiedSpace = userBooking && userBooking.space
       ? {
           id: userBooking.space.id,
-          name: userBooking.space.space_name,
+          name: userBooking.space.spaceName,
           roomNumber: userBooking.space.roomNumber,
           cabinNumber: userBooking.space.cabinNumber,
         }
