@@ -194,7 +194,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
         {
           model: Space,
           as: "space",
-          attributes: ["id", "space_name", "roomNumber", "cabinNumber", "seater"]
+          attributes: ["id", "spaceName", "roomNumber", "cabinNumber", "seater"]
         },
         {
           model: Kyc,
@@ -212,7 +212,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
       userName: booking.user.username,
       email: booking.user.email,
       mobile: booking.user.mobile,
-      spaceName: booking.space.space_name,
+      spaceName: booking.space.spaceName,
       roomNumber: booking.space.roomNumber,
       cabinNumber: booking.space.cabinNumber,
       seater: booking.space.seater,
@@ -272,10 +272,10 @@ adminController.verifySpaceBooking = async (req, res) => {
         {
           model: Space,
           as:"space",
-          attributes: ["id", "space_name", "roomNumber", "cabinNumber"]
+          attributes: ["id", "spaceName", "roomNumber", "cabinNumber"]
         },
         {
-          model:Kyc,
+          model:Kyc,  
           as: "kyc",
           attributes: { exclude: ["createdAt", "updatedAt"] }
         }
@@ -308,12 +308,12 @@ adminController.verifySpaceBooking = async (req, res) => {
     const emailSubject = `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`;
     const emailMessage = `
       <p>Dear ${booking.user.userName},</p>
-      <p>Your booking for ${booking.space.space_name} (Room ${booking.space.roomNumber}${booking.space.cabinNumber}) has been ${status === "Confirm" ? "confirmed" : "rejected"}.</p>
+      <p>Your booking for ${booking.space.spaceName} (Room ${booking.space.roomNumber}${booking.space.cabinNumber}) has been ${status === "Confirm" ? "confirmed" : "rejected"}.</p>
       ${remarks ? `<p>Remarks: ${remarks}</p>` : ''}
       <p>Booking Details:</p>
       <ul>
         <li>Booking ID: ${booking.id}</li>
-        <li>Space: ${booking.space.space_name}</li>
+        <li>Space: ${booking.space.spaceName}</li>    
         <li>Room: ${booking.space.roomNumber}${booking.space.cabinNumber}</li>
         <li>Date: ${booking.date}</li>
         <li>Start Date: ${booking.startDate}</li>
@@ -377,7 +377,7 @@ adminController.getDashboardData = async (req, res) => {
       order: [['createdAt', 'DESC']],
       include: [
         { model: User, as: 'user', attributes: ['username', 'email'] },
-        { model: Space, as: 'space', attributes: ['space_name'] }
+        { model: Space, as: 'space', attributes: ['spaceName'] }  
       ]
     });
     
@@ -483,7 +483,7 @@ adminController.getDashboardData = async (req, res) => {
         {
           model: Space,
           as: 'space',
-          attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
+          attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater', 'price']
         },
         
       ],
@@ -581,7 +581,7 @@ adminController.getPastMembers = async (req, res) => {
         {
           model: Space,
           as: 'space',
-          attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'price']
+          attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater', 'price']
         },
         {
           model: Kyc,
@@ -846,7 +846,7 @@ adminController.getBookingsPendingNotice = async (req, res) => {
       where: { status: 'Confirm', noticeGiven: false },
       include: [
         { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
-        { model: Space, as: 'space', attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater'] }
+        { model: Space, as: 'space', attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater'] }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -857,7 +857,7 @@ adminController.getBookingsPendingNotice = async (req, res) => {
       email: b.user?.email || null,
       mobile: b.user?.mobile || null,
       spaceId: b.spaceId,
-      spaceName: b.space?.space_name || null,
+      spaceName: b.space?.spaceName || null,
       roomNumber: b.space?.roomNumber || null,
       cabinNumber: b.space?.cabinNumber || null,
       seater: b.space?.seater || null,
@@ -882,7 +882,7 @@ adminController.getNoticeActiveBookings = async (req, res) => {
       where: { status: 'Notice Given' },
       include: [
         { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
-        { model: Space, as: 'space', attributes: ['id', 'space_name', 'roomNumber', 'cabinNumber', 'seater', 'availability'] }
+        { model: Space, as: 'space', attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater', 'availability'] }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -895,7 +895,7 @@ adminController.getNoticeActiveBookings = async (req, res) => {
         email: b.user?.email || null,
         mobile: b.user?.mobile || null,
         spaceId: b.spaceId,
-        spaceName: b.space?.space_name || null,
+        spaceName: b.space?.spaceName || null,
         roomNumber: b.space?.roomNumber || null,
         cabinNumber: b.space?.cabinNumber || null,
         seater: b.space?.seater || null,
