@@ -4,6 +4,7 @@ const {User, Booking, Space, Kyc, teamMember} = require ('../models');
 const adminController = require('./admin.controller');
 const httpStatus = require("../enums/httpStatusCode.enum");
 const responseMessages = require("../enums/responseMessages.enum");
+const { subscribeTokenToTopic, unsubscribeTokenFromTopic } = require('../utils/helper');
 
 const userController = {};
 // User Registration
@@ -474,5 +475,44 @@ userController.updateUserProfile = async (req, res) => {
 
 
 
+
+// Push notification: register token to user topic
+userController.registerPushToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.error(httpStatus.BAD_REQUEST, false, 'token is required');
+    const topic = `user_${req.user.id}`;
+    await subscribeTokenToTopic(token, topic);
+    return res.success(httpStatus.OK, true, 'Token subscribed to user topic', { topic });
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, 'Failed to register token', error.message);
+  }
+};
+
+// Push: subscribe to allowed topics (all_users only)
+userController.subscribePushTopic = async (req, res) => {
+  try {
+    const { token, topic } = req.body;
+    if (!token || !topic) return res.error(httpStatus.BAD_REQUEST, false, 'token and topic are required');
+    if (topic !== 'all_users' && topic !== `user_${req.user.id}`) {
+      return res.error(httpStatus.FORBIDDEN, false, 'Topic not allowed');
+    }
+    await subscribeTokenToTopic(token, topic);
+    return res.success(httpStatus.OK, true, `Subscribed to ${topic}`);
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, 'Subscribe failed', error.message);
+  }
+};
+
+userController.unsubscribePushTopic = async (req, res) => {
+  try {
+    const { token, topic } = req.body;
+    if (!token || !topic) return res.error(httpStatus.BAD_REQUEST, false, 'token and topic are required');
+    await unsubscribeTokenFromTopic(token, topic);
+    return res.success(httpStatus.OK, true, `Unsubscribed from ${topic}`);
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, 'Unsubscribe failed', error.message);
+  }
+};
 
 module.exports = userController;

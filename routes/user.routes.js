@@ -9,6 +9,11 @@ const upload = require("../middlewares/upload.middleware");
 router.post('/register',userController.register);
 router.post('/login' , userController.login);
 
+// Push notification endpoints
+router.post('/push/register', authMiddleware, userController.registerPushToken);
+router.post('/push/subscribe', authMiddleware, userController.subscribePushTopic);
+router.post('/push/unsubscribe', authMiddleware, userController.unsubscribePushTopic);
+
 // Dashboard routes
 router.get('/dashboard/membership', authMiddleware, userController.getMembershipDetails);
 router.get('/dashboard/bookings', authMiddleware, userController.getUserBookings);

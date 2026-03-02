@@ -37,18 +37,25 @@ async function sendMail(to, subject, html, options = {}) {
 
 // Firebase push utilities
 const admin = require('firebase-admin');
+const path = require('path');
+const fs = require('fs');
 function initFirebase() {
   if (admin.apps.length) return admin;
-  const credsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   try {
-    if (credsPath) {
+    const saPath = path.join(__dirname, '..', 'config', 'firebase-service-account.json');
+    if (fs.existsSync(saPath)) {
+      const serviceAccount = require(saPath);
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       admin.initializeApp({ credential: admin.credential.applicationDefault() });
-    } else if (projectId && clientEmail && privateKey) {
-      privateKey = privateKey?.replace(/\\n/g, '\n');
-      admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
+    } else {
+      const projectId = process.env.FIREBASE_PROJECT_ID;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      if (projectId && clientEmail && privateKey) {
+        privateKey = privateKey.replace(/\\n/g, '\n');
+        admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
+      }
     }
   } catch (e) {
     console.error('Firebase admin init error:', e.message);
@@ -67,4 +74,16 @@ async function sendPushToUserTopic(userId, message) {
   return sendPushToTopic(`user_${userId}`, message);
 }
 
-module.exports = { sendMail, sendPushToTopic, sendPushToUserTopic };
+async function subscribeTokenToTopic(token, topic) {
+  const app = initFirebase();
+  if (!app?.messaging) return;
+  await app.messaging().subscribeToTopic([token], topic);
+}
+
+async function unsubscribeTokenFromTopic(token, topic) {
+  const app = initFirebase();
+  if (!app?.messaging) return;
+  await app.messaging().unsubscribeFromTopic([token], topic);
+}
+
+module.exports = { sendMail, sendPushToTopic, sendPushToUserTopic, subscribeTokenToTopic, unsubscribeTokenFromTopic };
