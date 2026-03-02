@@ -9,6 +9,7 @@ const teamMember = require("../models/teamMember.model");
 const CafeteriaOrder = require("./cafeteriaOrder.model");
 
 
+
 // Space & AvailableDate
 Space.hasMany(AvailableDate, { as: "availableDates", foreignKey: "spaceId", onDelete: "CASCADE" });
 AvailableDate.belongsTo(Space, { as: "space", foreignKey: "spaceId" });
@@ -52,6 +53,7 @@ roomBooking.belongsTo(MeetingRoom, { foreignKey: "meetingRoomId", as: "meetingRo
 
 User.hasMany(roomBooking, { foreignKey: "userId", as: "roomBookings", onDelete: "CASCADE" });
 roomBooking.belongsTo(User, { foreignKey: "userId", as: "user" });
+
 
 
 // Export all models

@@ -1,6 +1,7 @@
 const { CafeteriaOrder, User, Booking, Space, Kyc } = require('../models');
 const httpStatus = require('../enums/httpStatusCode.enum');
 const { Op } = require('sequelize');
+const { sendPushToTopic } = require('../utils/helper');
 
 const cafeteriaController = {};
 
@@ -162,6 +163,14 @@ cafeteriaController.placeOrder = async (req, res) => {
 
       createdOrders.push(order);
     }
+
+
+    try {
+      await sendPushToTopic('cafeteria_admin', {
+        notification: { title: 'New Cafeteria Order', body: `${createdOrders.length} item(s), total ₹${totalAmount}` },
+        data: { type: 'cafeteria_order', total: String(totalAmount) }
+      });
+    } catch (e) {}
 
     return res.status(201).json({
       success: true,

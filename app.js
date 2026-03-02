@@ -40,6 +40,7 @@ const cafeteriaRoutes = require("./routes/cafeteria.routes");
 const invoiceRoutes = require('./routes/invoice.routes');
 
 
+
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/spaces",spaceRoutes);
@@ -47,6 +48,7 @@ app.use("/api/booking",bookingRoutes);
 app.use("/api/meetingrooms",meetingRoomRoutes);
 app.use("/api/cafeteria", cafeteriaRoutes);
 app.use('/api/invoices', invoiceRoutes);
+
 
 //middlewares
 app.use(handleNotFound);
@@ -59,7 +61,7 @@ async function startServer() {
     console.log("Database connection establish successfully");
 
     //for any schema changes
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log('All models were synchronized successfully.');
 
     // Now run the seeders after tables are created

@@ -3,8 +3,9 @@ const jwt = require('jsonwebtoken');
 const { User, MeetingRoom, roomBooking, Space, Booking, Kyc } = require('../models');
 const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
-const sendMail = require("../utils/helper")
+const { sendMail, sendPushToTopic, sendPushToUserTopic } = require("../utils/helper")
 const { getNoticeStatus } = require('../utils/noticeHelper');
+
 
 
 
@@ -303,6 +304,12 @@ adminController.verifySpaceBooking = async (req, res) => {
     }
     booking.status = status;
     await booking.save();
+    try {
+      await sendPushToUserTopic(booking.userId, {
+        notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
+        data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
+      });
+    } catch (e) {}
 
     // Send email notification to user
     const emailSubject = `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`;

@@ -1,5 +1,6 @@
 const { Booking, User, Space ,Kyc } = require('../models');
-const sendMail = require('../utils/helper');
+const { sendMail, sendPushToTopic, sendPushToUserTopic } = require('../utils/helper');
+
 
 
 
@@ -21,6 +22,12 @@ bookingController.createBooking = async (req, res) => {
       status: "Pending"
     });
     
+    try {
+      await sendPushToUserTopic(req.user.id, {
+        notification: { title: 'Booking Created', body: `Booking #${booking.id} created` },
+        data: { type: 'booking_created', entity: 'booking', entityId: String(booking.id) }
+      });
+    } catch (e) {}
     res.status(201).json({ message: "Booking created successfully", booking });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -40,8 +47,13 @@ bookingController.uploadPayment = async (req, res) => {
     // Send email to admin
     await sendMail("info@cohopers.in", "New Booking Payment Received",
       `A user has uploaded payment screenshot for booking ID: ${booking.id}`);
+    try {
+      await sendPushToTopic('admin', {
+        notification: { title: 'Payment Uploaded', body: `Booking #${booking.id}` },
+        data: { type: 'booking_payment', entity: 'booking', entityId: String(booking.id) }
+      });
+    } catch (e) {}
 
-  // Notify admin that a payment has been submitted and is awaiting verification
   res.json({ message: "Payment uploaded successfully and is pending admin verification", booking });
   } catch (err) {
     res.status(500).json({ error: err.message });

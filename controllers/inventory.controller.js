@@ -11,9 +11,9 @@ inventoryController.uploadSpaceImages = upload('spaces').array('spaceImages', 5)
 // Add new space
 inventoryController.addSpace = async (req, res, next) => {
   try {
-    const { space_name, seater, price, availability, availableDates,cabinNumber,roomNumber } = req.body;
+    const { spaceName, seater, price, availability, availableDates,cabinNumber,roomNumber } = req.body;
 
-    if (!space_name || !price) {
+    if (!spaceName || !price) {
       return res.status(400).json({
         success: false,
         message: 'Space name and price are required'
@@ -41,7 +41,7 @@ inventoryController.addSpace = async (req, res, next) => {
     const newSpace = await Space.create({
       cabinNumber,
       roomNumber,
-      space_name,
+      spaceName,
       seater: seater ? parseInt(seater) : null,
       price: parseFloat(price),
       gst: 18.00,
@@ -54,18 +54,30 @@ inventoryController.addSpace = async (req, res, next) => {
     let parsedDates = [];
     if (availableDates) {
       if (typeof availableDates === "string") {
-        parsedDates = availableDates.split(",").map(d => d.trim());
+        const s = availableDates.trim();
+        if (s.startsWith("[") && s.endsWith("]")) {
+          try {
+            parsedDates = JSON.parse(s);
+          } catch {
+            parsedDates = s
+              .replace(/^\[/, '').replace(/\]$/, '')
+              .split(',')
+              .map(d => d.trim().replace(/^"+|"+$/g, '').replace(/^'+|'+$/g, ''))
+              .filter(Boolean);
+          }
+        } else {
+          parsedDates = s
+            .split(',')
+            .map(d => d.trim().replace(/^"+|"+$/g, '').replace(/^'+|'+$/g, ''))
+            .filter(Boolean);
+        }
       } else if (Array.isArray(availableDates)) {
         parsedDates = availableDates;
       }
     }
 
     if (parsedDates.length > 0) {
-      const dateRecords = parsedDates.map(date => ({
-        spaceId: newSpace.id,
-        date
-      }));
-      await AvailableDate.bulkCreate(dateRecords);
+      await AvailableDate.create({ spaceId: newSpace.id, date: parsedDates });
     }
 
     res.status(201).json({
@@ -86,19 +98,50 @@ inventoryController.addSpace = async (req, res, next) => {
 inventoryController.getAllSpaces = async (req, res, next) => {
   try {
     const spaces = await Space.findAll({
-      include: [{ model: AvailableDate ,as:"availableDates" }],
+      include: [{ model: AvailableDate, as: 'availableDates', required: false }],
       order: [['createdAt', 'DESC']]
     });
-    
-    res.status(200).json({
-      success: true,
-      message: 'Spaces retrieved successfully',
-      data: spaces
+
+    const items = spaces.map(sp => {
+      const s = sp.toJSON();
+      const imagesStr = typeof s.images === 'string' ? s.images : JSON.stringify(s.images || []);
+      const availableDates = Array.isArray(s.availableDates)
+        ? s.availableDates.map(d => {
+            const dj = typeof d.toJSON === 'function' ? d.toJSON() : d;
+            const dateStr = typeof dj.date === 'string' ? dj.date : JSON.stringify(dj.date || []);
+            return {
+              id: dj.id,
+              date: dateStr,
+              spaceId: dj.spaceId,
+              createdAt: dj.createdAt,
+              updatedAt: dj.updatedAt
+            };
+          })
+        : [];
+      return {
+        id: s.id,
+        roomNumber: s.roomNumber,
+        cabinNumber: s.cabinNumber,
+        spaceName: s.spaceName,
+        seater: s.seater,
+        price: s.price,
+        gst: s.gst,
+        finalPrice: s.finalPrice,
+        isActive: s.isActive,
+        availability: s.availability,
+        images: imagesStr,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+        availableDates
+      };
     });
+
+    return res.status(200).json({ success: true, message: 'Spaces retrieved successfully', data: items });
   } catch (error) {
     next(error);
   }
 };
+
 
 // Get space by ID
 inventoryController.getSpaceById = async (req, res, next) => {
@@ -412,7 +455,7 @@ inventoryController.getAllTeamMembers = async (req, res, next) => {
         model: Booking,
         include: [{
           model: Space, as:"space",
-          attributes: ['roomNumber', 'cabinNumber', 'space_name']
+          attributes: ['roomNumber', 'cabinNumber', 'spaceName']
         }]
       }]
     });

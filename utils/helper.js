@@ -35,4 +35,36 @@ async function sendMail(to, subject, html, options = {}) {
   }
 }
 
-module.exports = sendMail;
+// Firebase push utilities
+const admin = require('firebase-admin');
+function initFirebase() {
+  if (admin.apps.length) return admin;
+  const credsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  try {
+    if (credsPath) {
+      admin.initializeApp({ credential: admin.credential.applicationDefault() });
+    } else if (projectId && clientEmail && privateKey) {
+      privateKey = privateKey?.replace(/\\n/g, '\n');
+      admin.initializeApp({ credential: admin.credential.cert({ projectId, clientEmail, privateKey }) });
+    }
+  } catch (e) {
+    console.error('Firebase admin init error:', e.message);
+  }
+  return admin;
+}
+
+async function sendPushToTopic(topic, message) {
+  const app = initFirebase();
+  if (!app?.messaging) return;
+  const safeData = message.data ? Object.fromEntries(Object.entries(message.data).map(([k, v]) => [k, String(v)])) : undefined;
+  await app.messaging().send({ topic, notification: message.notification, data: safeData });
+}
+
+async function sendPushToUserTopic(userId, message) {
+  return sendPushToTopic(`user_${userId}`, message);
+}
+
+module.exports = { sendMail, sendPushToTopic, sendPushToUserTopic };
