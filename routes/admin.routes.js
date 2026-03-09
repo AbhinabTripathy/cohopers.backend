@@ -37,4 +37,9 @@ router.post('/booking/:id/submit-notice', adminAuthMiddleware, upload('notice-pd
 router.get('/bookings/pending-notice', adminAuthMiddleware, adminController.getBookingsPendingNotice);
 router.get('/bookings/active-notice', adminAuthMiddleware, adminController.getNoticeActiveBookings);
 
+// Admin push notification endpoints
+router.post('/push/register', adminAuthMiddleware, adminController.registerAdminPushToken);
+router.post('/push/subscribe', adminAuthMiddleware, adminController.subscribePushTopic);
+router.post('/push/unsubscribe', adminAuthMiddleware, adminController.unsubscribePushTopic);
+
 module.exports = router;

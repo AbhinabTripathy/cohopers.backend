@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { User, MeetingRoom, roomBooking, Space, Booking, Kyc } = require('../models');
 const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
-const { sendMail, sendPushToTopic, sendPushToUserTopic } = require("../utils/helper")
+const { sendMail, sendPushToTopic, sendPushToUserTopic, subscribeTokenToTopic, unsubscribeTokenFromTopic } = require("../utils/helper")
 const { getNoticeStatus } = require('../utils/noticeHelper');
 
 
@@ -924,6 +924,51 @@ adminController.getNoticeActiveBookings = async (req, res) => {
       message: 'Failed to fetch active notices',
       error: error.message
     });
+  }
+};
+
+adminController.registerAdminPushToken = async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token required' });
+    }
+    await subscribeTokenToTopic(token, 'admins');
+    await subscribeTokenToTopic(token, 'cafeteria_admin');
+    await subscribeTokenToTopic(token, `admin_${req.user.id}`);
+    return res.status(HttpStatus.OK).json({ success: true, message: 'Token subscribed', topics: ['admins','cafeteria_admin', `admin_${req.user.id}`] });
+  } catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to register admin token', error: err.message });
+  }
+};
+
+adminController.subscribePushTopic = async (req, res) => {
+  try {
+    const { token, topic } = req.body || {};
+    if (!token || !topic) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token and topic required' });
+    }
+    const allowed = new Set(['admins', 'cafeteria_admin', `admin_${req.user.id}`]);
+    if (!allowed.has(String(topic))) {
+      return res.status(HttpStatus.FORBIDDEN).json({ success: false, message: 'Topic not allowed' });
+    }
+    await subscribeTokenToTopic(token, topic);
+    return res.status(HttpStatus.OK).json({ success: true, message: `Subscribed to ${topic}` });
+  } catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Subscribe failed', error: err.message });
+  }
+};
+
+adminController.unsubscribePushTopic = async (req, res) => {
+  try {
+    const { token, topic } = req.body || {};
+    if (!token || !topic) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token and topic required' });
+    }
+    await unsubscribeTokenFromTopic(token, topic);
+    return res.status(HttpStatus.OK).json({ success: true, message: `Unsubscribed from ${topic}` });
+  } catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Unsubscribe failed', error: err.message });
   }
 };
 

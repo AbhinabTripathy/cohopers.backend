@@ -1,7 +1,7 @@
 const { CafeteriaOrder, User, Booking, Space, Kyc } = require('../models');
 const httpStatus = require('../enums/httpStatusCode.enum');
 const { Op } = require('sequelize');
-const { sendPushToTopic } = require('../utils/helper');
+const { sendPushToTopic, sendPushToUserTopic } = require('../utils/helper');
 
 const cafeteriaController = {};
 
@@ -298,6 +298,16 @@ cafeteriaController.updateOrderStatus = async (req, res) => {
 
     order.status = status;
     await order.save();
+
+    try {
+      const pushId = await sendPushToUserTopic(order.userId, {
+        notification: { title: `Cafeteria Order ${status}`, body: `Order #${order.id} is ${status}` },
+        data: { type: 'cafeteria_order', entity: 'cafeteria_order', entityId: String(order.id), status }
+      });
+      console.log(`Push sent to topic user_${order.userId}: ${pushId}`);
+    } catch (e) {
+      console.error('Cafeteria order push failed:', e);
+    }
 
     return res.status(httpStatus.OK).json({
       success: true,
