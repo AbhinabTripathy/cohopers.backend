@@ -929,14 +929,16 @@ adminController.getNoticeActiveBookings = async (req, res) => {
 
 adminController.registerAdminPushToken = async (req, res) => {
   try {
-    const { token } = req.body || {};
+    const { token, deviceType, deviceId } = req.body || {};
     if (!token) {
       return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token required' });
     }
-    await subscribeTokenToTopic(token, 'admins');
-    await subscribeTokenToTopic(token, 'cafeteria_admin');
-    await subscribeTokenToTopic(token, `admin_${req.user.id}`);
-    return res.status(HttpStatus.OK).json({ success: true, message: 'Token subscribed', topics: ['admins','cafeteria_admin', `admin_${req.user.id}`] });
+    console.log('Admin push token registered:', { token, deviceType, deviceId, adminId: req.user?.id });
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      message: 'Push token registered successfully',
+      data: { token, deviceType: deviceType || null, deviceId: deviceId || null }
+    });
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to register admin token', error: err.message });
   }
