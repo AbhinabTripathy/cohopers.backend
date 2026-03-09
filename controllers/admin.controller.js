@@ -305,11 +305,14 @@ adminController.verifySpaceBooking = async (req, res) => {
     booking.status = status;
     await booking.save();
     try {
-      await sendPushToUserTopic(booking.userId, {
+      const pushId = await sendPushToUserTopic(booking.userId, {
         notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
         data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
       });
-    } catch (e) {}
+      console.log(`Push sent to topic user_${booking.userId}: ${pushId}`);
+    } catch (e) {
+      console.error('Push send failed:', e);
+    }
 
     // Send email notification to user
     const emailSubject = `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`;

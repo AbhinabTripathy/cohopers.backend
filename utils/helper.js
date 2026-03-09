@@ -65,13 +65,20 @@ function initFirebase() {
 
 async function sendPushToTopic(topic, message) {
   const app = initFirebase();
-  if (!app?.messaging) return;
+  if (!app?.messaging) return null;
   const safeData = message.data ? Object.fromEntries(Object.entries(message.data).map(([k, v]) => [k, String(v)])) : undefined;
-  await app.messaging().send({ topic, notification: message.notification, data: safeData });
+  return await app.messaging().send({ topic, notification: message.notification, data: safeData });
 }
 
 async function sendPushToUserTopic(userId, message) {
   return sendPushToTopic(`user_${userId}`, message);
+}
+
+async function sendPushToToken(token, message) {
+  const app = initFirebase();
+  if (!app?.messaging) return null;
+  const safeData = message.data ? Object.fromEntries(Object.entries(message.data).map(([k, v]) => [k, String(v)])) : undefined;
+  return await app.messaging().send({ token, notification: message.notification, data: safeData });
 }
 
 async function subscribeTokenToTopic(token, topic) {
@@ -86,4 +93,4 @@ async function unsubscribeTokenFromTopic(token, topic) {
   await app.messaging().unsubscribeFromTopic([token], topic);
 }
 
-module.exports = { sendMail, sendPushToTopic, sendPushToUserTopic, subscribeTokenToTopic, unsubscribeTokenFromTopic };
+module.exports = { sendMail, sendPushToTopic, sendPushToUserTopic, sendPushToToken, subscribeTokenToTopic, unsubscribeTokenFromTopic };
