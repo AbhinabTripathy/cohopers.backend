@@ -41,5 +41,6 @@ router.get('/bookings/active-notice', adminAuthMiddleware, adminController.getNo
 router.post('/push/register', adminAuthMiddleware, adminController.registerAdminPushToken);
 router.post('/push/subscribe', adminAuthMiddleware, adminController.subscribePushTopic);
 router.post('/push/unsubscribe', adminAuthMiddleware, adminController.unsubscribePushTopic);
+router.get('/testNotification' , adminController.testNotification);
 
 module.exports = router;

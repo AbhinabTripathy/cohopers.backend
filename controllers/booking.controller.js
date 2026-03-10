@@ -48,7 +48,7 @@ bookingController.uploadPayment = async (req, res) => {
     await sendMail("info@cohopers.in", "New Booking Payment Received",
       `A user has uploaded payment screenshot for booking ID: ${booking.id}`);
     try {
-      await sendPushToTopic('admin', {
+      await sendPushToTopic('admins', {
         notification: { title: 'Payment Uploaded', body: `Booking #${booking.id}` },
         data: { type: 'booking_payment', entity: 'booking', entityId: String(booking.id) }
       });

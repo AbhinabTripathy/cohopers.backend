@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { User, MeetingRoom, roomBooking, Space, Booking, Kyc } = require('../models');
+const { User, MeetingRoom, roomBooking, Space, Booking, Kyc, FCMToken } = require('../models');
 const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
 const { sendMail, sendPushToTopic, sendPushToUserTopic, subscribeTokenToTopic, unsubscribeTokenFromTopic } = require("../utils/helper")
@@ -933,6 +933,7 @@ adminController.registerAdminPushToken = async (req, res) => {
     if (!token) {
       return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token required' });
     }
+    await FCMToken.upsert({ token: String(token), userId: req.user?.id || null, role: 'admin', deviceId: deviceId || null, deviceType: deviceType || null });
     console.log('Admin push token registered:', { token, deviceType, deviceId, adminId: req.user?.id });
     return res.status(HttpStatus.OK).json({
       success: true,
@@ -974,4 +975,30 @@ adminController.unsubscribePushTopic = async (req, res) => {
   }
 };
 
+
+adminController.testNotification = async (req, res) => {
+
+  try {
+
+    const result = await sendPushToTopic("admins", {
+      notification: {
+        title: "Test Notification",
+        body: "Hello from CoHopers"
+      },
+      data: {
+        type: "test"
+      }
+    });
+
+    res.json({
+      success: true,
+      result
+    });
+
+  } catch (err) {
+
+    res.status(500).json(err);
+
+  }
+};
 module.exports = adminController;

@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const {User, Booking, Space, Kyc, teamMember} = require ('../models');
+const {User, Booking, Space, Kyc, teamMember, FCMToken} = require ('../models');
 const adminController = require('./admin.controller');
 const httpStatus = require("../enums/httpStatusCode.enum");
 const responseMessages = require("../enums/responseMessages.enum");
@@ -481,9 +481,10 @@ userController.registerPushToken = async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) return res.error(httpStatus.BAD_REQUEST, false, 'token is required');
+    await FCMToken.upsert({ token: String(token), userId: req.user.id, role: 'user' });
     const topic = `user_${req.user.id}`;
     await subscribeTokenToTopic(token, topic);
-    return res.success(httpStatus.OK, true, 'Token subscribed to user topic', { topic });
+    return res.success(httpStatus.OK, true, 'Token registered and subscribed to user topic', { topic });
   } catch (error) {
     return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, 'Failed to register token', error.message);
   }

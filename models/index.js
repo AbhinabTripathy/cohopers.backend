@@ -7,7 +7,7 @@ const MeetingRoom = require("./meetingRoom.model");
 const roomBooking = require("./roomBooking.model");
 const teamMember = require("../models/teamMember.model");
 const CafeteriaOrder = require("./cafeteriaOrder.model");
-
+const FCMToken = require("./fcmToken.model");
 
 
 // Space & AvailableDate
@@ -54,7 +54,9 @@ roomBooking.belongsTo(MeetingRoom, { foreignKey: "meetingRoomId", as: "meetingRo
 User.hasMany(roomBooking, { foreignKey: "userId", as: "roomBookings", onDelete: "CASCADE" });
 roomBooking.belongsTo(User, { foreignKey: "userId", as: "user" });
 
-
+// FCM Tokens
+User.hasMany(FCMToken, { foreignKey: "userId", as: "pushTokens", onDelete: "CASCADE" });
+FCMToken.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 // Export all models
 module.exports = {
@@ -66,5 +68,6 @@ module.exports = {
   MeetingRoom,
   roomBooking,
   teamMember,
-  CafeteriaOrder
+  CafeteriaOrder,
+  FCMToken
 };

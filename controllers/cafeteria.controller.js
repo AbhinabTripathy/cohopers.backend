@@ -166,11 +166,14 @@ cafeteriaController.placeOrder = async (req, res) => {
 
 
     try {
-      await sendPushToTopic('cafeteria_admin', {
+      const pushId = await sendPushToTopic('cafeteria_admin', {
         notification: { title: 'New Cafeteria Order', body: `${createdOrders.length} item(s), total ₹${totalAmount}` },
         data: { type: 'cafeteria_order', total: String(totalAmount) }
       });
-    } catch (e) {}
+      console.log(`Push sent to topic cafeteria_admin: ${pushId}`);
+    } catch (e) {
+      console.error('Cafeteria admin topic push failed:', e);
+    }
 
     return res.status(201).json({
       success: true,
