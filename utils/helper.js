@@ -10,29 +10,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify((err, success) => {
-  if (err) {
-    console.error("SMTP Error:", err.message);
-  } else {
-    console.log("Zoho SMTP Connected Successfully");
-  }
-});
+// SMTP Email disabled - using push notifications only
+console.log("ℹ️  Email notifications disabled - Push notifications active only");
+console.log("ℹ️  All notifications will be sent via Firebase Cloud Messaging (FCM)");
 
 async function sendMail(to, subject, html, options = {}) {
-  try {
-    const mailOptions = {
-      from: `"CoHopers" <${process.env.ADMIN_EMAIL}>`,
-      to,
-      subject,
-      html,
-      ...options,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log("Mail sent successfully");
-  } catch (error) {
-    console.error("Mail send error:", error.message);
-  }
+  // Email notifications disabled - only push notifications active
+  console.log(`ℹ️  [Email Disabled] Would have sent email to: ${to} | Subject: ${subject}`);
+  return { skipped: true, reason: "Email notifications disabled" };
 }
 ///////// Push notification ////// 
 const admin = require("firebase-admin");
@@ -44,6 +29,7 @@ const fs = require("fs");
  */
 function initFirebase() {
   if (admin.apps.length > 0) {
+    console.log("✓ Firebase already initialized");
     return admin;
   }
 
@@ -58,7 +44,8 @@ function initFirebase() {
         credential: admin.credential.cert(serviceAccount),
       });
 
-      console.log("Firebase initialized using service account file");
+      console.log("✓ Firebase initialized using service account file");
+      console.log(`✓ Firebase Project ID: ${serviceAccount.project_id}`);
     }
 
     // OPTION 2: GOOGLE_APPLICATION_CREDENTIALS
@@ -67,7 +54,7 @@ function initFirebase() {
         credential: admin.credential.applicationDefault(),
       });
 
-      console.log("Firebase initialized using application default credentials");
+      console.log("✓ Firebase initialized using GOOGLE_APPLICATION_CREDENTIALS env variable");
     }
 
     // OPTION 3: Environment variables
@@ -87,13 +74,26 @@ function initFirebase() {
           }),
         });
 
-        console.log("Firebase initialized using environment variables");
+        console.log("✓ Firebase initialized using environment variables");
+        console.log(`✓ Firebase Project ID: ${projectId}`);
+        console.log(`✓ Firebase Client Email: ${clientEmail}`);
       } else {
-        console.warn("Firebase credentials not found");
+        const missing = [];
+        if (!projectId) missing.push("FIREBASE_PROJECT_ID");
+        if (!clientEmail) missing.push("FIREBASE_CLIENT_EMAIL");
+        if (!privateKey) missing.push("FIREBASE_PRIVATE_KEY");
+        
+        console.error("✗ Firebase credentials not found. Missing environment variables:", missing.join(", "));
+        console.error("✗ Please configure one of:");
+        console.error("  1. config/firebase-service-account.json file");
+        console.error("  2. GOOGLE_APPLICATION_CREDENTIALS environment variable");
+        console.error("  3. FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY environment variables");
+        throw new Error("Firebase credentials not configured");
       }
     }
   } catch (error) {
-    console.error("Firebase initialization error:", error.message);
+    console.error("✗ Firebase initialization error:", error.message);
+    throw error; // Throw to make failure visible at startup
   }
 
   return admin;
@@ -118,9 +118,17 @@ async function sendPushToToken(token, message) {
       data: safeData,
     };
 
-    return await app.messaging().send(payload);
+    const response = await app.messaging().send(payload);
+    console.log(`✓ Push notification sent to token: ${token}`, { response });
+    return response;
   } catch (error) {
-    console.error("Push token error:", error.message);
+    console.error(`✗ Push token error for ${token}:`, { 
+      message: error.message, 
+      code: error.code,
+      tokenLength: token?.length,
+      timestamp: new Date().toISOString()
+    });
+    throw error; // Re-throw to allow callers to handle
   }
 }
 
@@ -143,9 +151,16 @@ async function sendPushToTopic(topic, message) {
       data: safeData,
     };
 
-    return await app.messaging().send(payload);
+    const response = await app.messaging().send(payload);
+    console.log(`✓ Push notification sent to topic: ${topic}`, { response });
+    return response;
   } catch (error) {
-    console.error("Push topic error:", error.message);
+    console.error(`✗ Push topic error for topic '${topic}':`, { 
+      message: error.message, 
+      code: error.code,
+      timestamp: new Date().toISOString()
+    });
+    throw error; // Re-throw to allow callers to handle
   }
 }
 
@@ -162,9 +177,16 @@ async function sendPushToUserTopic(userId, message) {
 async function subscribeTokenToTopic(token, topic) {
   try {
     const app = initFirebase();
-    return await app.messaging().subscribeToTopic([token], topic);
+    const response = await app.messaging().subscribeToTopic([token], topic);
+    console.log(`✓ Token subscribed to topic '${topic}'`, { response });
+    return response;
   } catch (error) {
-    console.error("Subscribe topic error:", error.message);
+    console.error(`✗ Subscribe topic error for topic '${topic}':`, { 
+      message: error.message, 
+      code: error.code,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
   }
 }
 
@@ -174,9 +196,16 @@ async function subscribeTokenToTopic(token, topic) {
 async function unsubscribeTokenFromTopic(token, topic) {
   try {
     const app = initFirebase();
-    return await app.messaging().unsubscribeFromTopic([token], topic);
+    const response = await app.messaging().unsubscribeFromTopic([token], topic);
+    console.log(`✓ Token unsubscribed from topic '${topic}'`, { response });
+    return response;
   } catch (error) {
-    console.error("Unsubscribe topic error:", error.message);
+    console.error(`✗ Unsubscribe topic error for topic '${topic}':`, { 
+      message: error.message, 
+      code: error.code,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
   }
 }
 

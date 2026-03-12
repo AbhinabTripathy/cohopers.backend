@@ -335,7 +335,7 @@ adminController.verifySpaceBooking = async (req, res) => {
       <p>Thank you for choosing CoHopers!</p>
     `;
 
-    await sendMail(emailSubject, emailMessage);
+    await sendMail(booking.user.email, emailSubject, emailMessage);
 
     res.status(HttpStatus.OK).json({
       success: true,
