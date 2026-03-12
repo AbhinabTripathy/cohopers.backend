@@ -490,14 +490,28 @@ userController.registerPushToken = async (req, res) => {
   }
 };
 
-// Push: subscribe to allowed topics (all_users only)
+// Push: subscribe to allowed topics
 userController.subscribePushTopic = async (req, res) => {
   try {
     const { token, topic } = req.body;
     if (!token || !topic) return res.error(httpStatus.BAD_REQUEST, false, 'token and topic are required');
-    if (topic !== 'all_users' && topic !== `user_${req.user.id}`) {
-      return res.error(httpStatus.FORBIDDEN, false, 'Topic not allowed');
+    
+    // Allowed topics for users
+    const allowedTopics = new Set([
+      'all_users',                        // Broadcast notifications
+      `user_${req.user.id}`,              // Personal notifications
+      'cafeteria_updates',                // Cafeteria service updates
+      'booking_updates',                  // Booking status updates
+      'meeting_room_updates',             // Meeting room updates
+      `user_${req.user.id}_cafeteria`,    // Personal cafeteria orders
+      `user_${req.user.id}_bookings`,     // Personal booking notifications
+      `user_${req.user.id}_rooms`,        // Personal meeting room notifications
+    ]);
+    
+    if (!allowedTopics.has(String(topic))) {
+      return res.error(httpStatus.FORBIDDEN, false, `Topic "${topic}" not allowed. Allowed topics: all_users, user_${req.user.id}, cafeteria_updates, booking_updates, meeting_room_updates`);
     }
+    
     await subscribeTokenToTopic(token, topic);
     return res.success(httpStatus.OK, true, `Subscribed to ${topic}`);
   } catch (error) {

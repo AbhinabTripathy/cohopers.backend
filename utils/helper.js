@@ -11,12 +11,12 @@ const transporter = nodemailer.createTransport({
 });
 
 // SMTP Email disabled - using push notifications only
-console.log("ℹ️  Email notifications disabled - Push notifications active only");
-console.log("ℹ️  All notifications will be sent via Firebase Cloud Messaging (FCM)");
+console.log("  Email notifications disabled - Push notifications active only");
+console.log("  All notifications will be sent via Firebase Cloud Messaging (FCM)");
 
 async function sendMail(to, subject, html, options = {}) {
   // Email notifications disabled - only push notifications active
-  console.log(`ℹ️  [Email Disabled] Would have sent email to: ${to} | Subject: ${subject}`);
+  console.log(`  [Email Disabled] Would have sent email to: ${to} | Subject: ${subject}`);
   return { skipped: true, reason: "Email notifications disabled" };
 }
 ///////// Push notification ////// 
