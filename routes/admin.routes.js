@@ -42,5 +42,8 @@ router.post('/push/register', adminAuthMiddleware, adminController.registerAdmin
 router.post('/push/subscribe', adminAuthMiddleware, adminController.subscribePushTopic);
 router.post('/push/unsubscribe', adminAuthMiddleware, adminController.unsubscribePushTopic);
 router.get('/testNotification' , adminController.testNotification);
+// Admin push test endpoints
+router.post('/push/send-topic', adminAuthMiddleware, adminController.sendTestPushToTopic);
+router.post('/push/send-token', adminAuthMiddleware, adminController.sendTestPushToToken);
 
 module.exports = router;

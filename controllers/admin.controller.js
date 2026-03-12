@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const { User, MeetingRoom, roomBooking, Space, Booking, Kyc, FCMToken } = require('../models');
 const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
-const { sendMail, sendPushToTopic, sendPushToUserTopic, subscribeTokenToTopic, unsubscribeTokenFromTopic } = require("../utils/helper")
+const { sendMail, sendPushToTopic, sendPushToUserTopic, sendPushToToken, subscribeTokenToTopic, unsubscribeTokenFromTopic } = require("../utils/helper")
 const { getNoticeStatus } = require('../utils/noticeHelper');
 
 
@@ -1001,4 +1001,36 @@ adminController.testNotification = async (req, res) => {
 
   }
 };
+adminController.sendTestPushToTopic = async (req, res) => {
+  try {
+    const { topic, title, body, data } = req.body || {};
+    if (!topic) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'topic required' });
+    }
+    const id = await sendPushToTopic(String(topic), {
+      notification: { title: String(title || ''), body: String(body || '') },
+      data: data || {}
+    });
+    return res.status(HttpStatus.OK).json({ success: true, id });
+  } catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to send to topic', error: err.message });
+  }
+};
+
+adminController.sendTestPushToToken = async (req, res) => {
+  try {
+    const { token, title, body, data } = req.body || {};
+    if (!token) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token required' });
+    }
+    const id = await sendPushToToken(String(token), {
+      notification: { title: String(title || ''), body: String(body || '') },
+      data: data || {}
+    });
+    return res.status(HttpStatus.OK).json({ success: true, id });
+  } catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to send to token', error: err.message });
+  }
+};
+
 module.exports = adminController;
