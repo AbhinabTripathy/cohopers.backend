@@ -27,7 +27,16 @@ bookingController.createBooking = async (req, res) => {
         notification: { title: 'Booking Created', body: `Booking #${booking.id} created` },
         data: { type: 'booking_created', entity: 'booking', entityId: String(booking.id) }
       });
-    } catch (e) {}
+      
+      // Also broadcast to booking updates topic
+      await sendPushToTopic('booking_updates', {
+        notification: { title: 'New Booking', body: `Booking #${booking.id} created` },
+        data: { type: 'booking_created', entity: 'booking', entityId: String(booking.id) }
+      });
+      console.log(`✓ Push sent to booking_updates topic for booking #${booking.id}`);
+    } catch (e) {
+      console.error('✗ Booking push failed:', e);
+    }
     res.status(201).json({ message: "Booking created successfully", booking });
   } catch (err) {
     res.status(500).json({ error: err.message });

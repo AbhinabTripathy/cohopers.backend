@@ -309,9 +309,16 @@ adminController.verifySpaceBooking = async (req, res) => {
         notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
         data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
       });
-      console.log(`Push sent to topic user_${booking.userId}: ${pushId}`);
+      console.log(`✓ Push sent to topic user_${booking.userId}: ${pushId}`);
+      
+      // Also broadcast to booking updates topic
+      await sendPushToTopic('booking_updates', {
+        notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
+        data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
+      });
+      console.log(`✓ Push sent to topic booking_updates: ${pushId}`);
     } catch (e) {
-      console.error('Push send failed:', e);
+      console.error('✗ Push send failed:', e);
     }
 
     // Send email notification to user
@@ -951,10 +958,31 @@ adminController.subscribePushTopic = async (req, res) => {
     if (!token || !topic) {
       return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token and topic required' });
     }
-    const allowed = new Set(['admins', 'cafeteria_admin', `admin_${req.user.id}`]);
+    
+    // Allowed topics for admins - matches frontend subscription topics
+    const allowed = new Set([
+      'all_users',                        // Broadcast notifications
+      'cafeteria_updates',                // Cafeteria/Refreshment orders
+      'booking_updates',                  // Space bookings
+      'meeting_room_updates',             // Meeting rooms
+      'admins',                           // All admins broadcast
+      'cafeteria_admin',                  // Cafeteria admin notifications
+      `admin_${req.user.id}`,             // Personal admin notifications
+      'booking_admin',                    // Booking admin notifications
+      'meeting_room_admin',               // Meeting room admin notifications
+      'all_admins',                       // All admin updates
+      'payment_notifications',            // Payment received notifications
+      'user_activity',                    // User activity monitoring
+    ]);
+    
     if (!allowed.has(String(topic))) {
-      return res.status(HttpStatus.FORBIDDEN).json({ success: false, message: 'Topic not allowed' });
+      return res.status(HttpStatus.FORBIDDEN).json({ 
+        success: false, 
+        message: `Topic "${topic}" not allowed`,
+        allowedTopics: Array.from(allowed).sort()
+      });
     }
+    
     await subscribeTokenToTopic(token, topic);
     return res.status(HttpStatus.OK).json({ success: true, message: `Subscribed to ${topic}` });
   } catch (err) {
