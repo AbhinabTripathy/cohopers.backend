@@ -40,7 +40,7 @@ cafeteriaController.getMenu = async (req, res) => {
 cafeteriaController.placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-    let { orders, specialInstructions, utrNumber, isPersonal } = req.body;
+    let { orders, specialInstructions, utrNumber, isPersonal, isMonthlyPayment } = req.body;
 
     // Parse orders if it's a string 
     if (typeof orders === "string") {
@@ -119,6 +119,14 @@ cafeteriaController.placeOrder = async (req, res) => {
         });
       }
 
+      // If not monthly payment, payment screenshot is required
+      if (!isMonthlyPayment && !req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment screenshot is required for one-time payment orders"
+        });
+      }
+
       // Determine price
       let price = 0;
       if (orderType === "Coffee") {
@@ -158,6 +166,8 @@ cafeteriaController.placeOrder = async (req, res) => {
           : null,
         status: "Pending",
         isPersonal: isPersonal === "true" || isPersonal === true, // Treat as personal if explicitly true
+        isMonthlyPayment: isMonthlyPayment === "true" || isMonthlyPayment === true, // Monthly payment flag
+        paid: "Pending", // Initially pending, admin will decide
         kycId, // Include the KYC ID
       });
 
@@ -285,17 +295,25 @@ cafeteriaController.testGetAllOrders = async (req, res) => {
   }
 };
 
-// Admin: Update order status
+// Admin: Update order status and payment status
 cafeteriaController.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, paid } = req.body;
 
-    // Validate status
-    if (!['Pending', 'Confirmed', 'Delivered', 'Cancelled'].includes(status)) {
+    // Validate status if provided
+    if (status && !['Pending', 'Confirmed', 'Delivered', 'Cancelled'].includes(status)) {
       return res.status(httpStatus.BAD_REQUEST).json({
         success: false,
         message: "Invalid status value"
+      });
+    }
+
+    // Validate paid field if provided
+    if (paid && !['Yes', 'No'].includes(paid)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid paid value. Must be 'Yes' or 'No'"
       });
     }
 
@@ -307,13 +325,39 @@ cafeteriaController.updateOrderStatus = async (req, res) => {
       });
     }
 
-    order.status = status;
+    // Check if order is already Cancelled - prevent any further updates
+    if (order.status === "Cancelled") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        success: false,
+        message: "Cannot update a Cancelled order. Order is locked."
+      });
+    }
+
+    // Update status if provided
+    if (status) {
+      order.status = status;
+    }
+
+    // Update paid status if provided
+    if (paid) {
+      order.paid = paid;
+      // If paid is "No", automatically cancel the order
+      if (paid === "No") {
+        order.status = "Cancelled";
+      }
+      // If paid is "Yes", set to Confirmed
+      else if (paid === "Yes") {
+        order.status = "Confirmed";
+      }
+    }
+
     await order.save();
 
     try {
+      const finalStatus = order.status;
       const pushId = await sendPushToUserTopic(order.userId, {
-        notification: { title: `Cafeteria Order ${status}`, body: `Order #${order.id} is ${status}` },
-        data: { type: 'cafeteria_order', entity: 'cafeteria_order', entityId: String(order.id), status }
+        notification: { title: `Cafeteria Order ${finalStatus}`, body: `Order #${order.id} is ${finalStatus}` },
+        data: { type: 'cafeteria_order', entity: 'cafeteria_order', entityId: String(order.id), status: finalStatus, paid: order.paid }
       });
       console.log(`Push sent to topic user_${order.userId}: ${pushId}`);
     } catch (e) {

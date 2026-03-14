@@ -68,6 +68,20 @@ const CafeteriaOrder = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    isMonthlyPayment: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    paid: {
+      type: DataTypes.ENUM("Yes", "No", "Pending"),
+      allowNull: false,
+      defaultValue: "Pending",
+    },
+    kycId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: "cafeteria_orders",
