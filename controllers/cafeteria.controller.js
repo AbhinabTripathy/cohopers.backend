@@ -329,24 +329,25 @@ cafeteriaController.updateOrderStatus = async (req, res) => {
     if (order.status === "Cancelled") {
       return res.status(httpStatus.BAD_REQUEST).json({
         success: false,
-        message: "Cannot update a Cancelled order. Order is locked."
+        message: "Cannot update this order. Order is Cancelled and locked."
       });
     }
 
-    // Update status if provided
+    // Update status if provided (explicit status takes priority)
     if (status) {
       order.status = status;
     }
 
     // Update paid status if provided
+    // Only auto-change status if no explicit status was provided
     if (paid) {
       order.paid = paid;
-      // If paid is "No", automatically cancel the order
-      if (paid === "No") {
+      // If paid is "No", automatically cancel the order (only if status not explicitly set)
+      if (paid === "No" && !status) {
         order.status = "Cancelled";
       }
-      // If paid is "Yes", set to Confirmed
-      else if (paid === "Yes") {
+      // If paid is "Yes", set to Confirmed (only if status not explicitly set)
+      else if (paid === "Yes" && !status) {
         order.status = "Confirmed";
       }
     }

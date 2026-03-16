@@ -69,7 +69,7 @@ bookingController.uploadPayment = async (req, res) => {
   }
 };
 
-//kyc submit for specific role
+//kyc submit for specific 
 bookingController.submitKyc = async (req, res) => {
   try {
     const { type, name, email, mobile, companyName, gstNumber, directorName, din } = req.body;

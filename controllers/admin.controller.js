@@ -8,7 +8,6 @@ const { getNoticeStatus } = require('../utils/noticeHelper');
 
 
 
-
 const adminController = {}; 
 
 // temporary ADMIN register (use only once)
@@ -65,7 +64,6 @@ adminController.registerAdmin = async (req, res) => {
     });
   }
 };
-
 
 // login controller for admin
 adminController.login = async (req, res) => {
@@ -126,8 +124,6 @@ adminController.login = async (req, res) => {
   }
 };
 
-
-
 // Get all meeting room bookings for admin panel
 adminController.getAllMeetingRoomBookings = async (req, res) => {
   try {
@@ -180,7 +176,6 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
     });
   }
 };
-
 
 // Get all space bookings for admin panel
 adminController.getAllSpaceBookings = async (req, res) => {
@@ -240,8 +235,6 @@ adminController.getAllSpaceBookings = async (req, res) => {
     });
   }
 };
-
-
 
 // Verify space booking
 adminController.verifySpaceBooking = async (req, res) => {
@@ -656,8 +649,7 @@ adminController.getPastMembers = async (req, res) => {
   }
 };
 
-
-
+// KYC verification for a booking
 adminController.verifyKyc = async (req, res) => {
   try {
     const { id } = req.params;
@@ -701,6 +693,7 @@ adminController.verifyKyc = async (req, res) => {
     });
   }
 };
+
 //get all kyc
 adminController.getAllKyc = async (req, res) => {
   try {
@@ -806,6 +799,7 @@ adminController.getKycById = async (req, res) => {
   }
 };
 
+// Submit notice for a booking
 adminController.submitNotice = async (req, res) => {
   try {
     const { id } = req.params;
@@ -857,6 +851,7 @@ adminController.submitNotice = async (req, res) => {
   }
 };
 
+// Get all bookings that are pending notice submission
 adminController.getBookingsPendingNotice = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
@@ -893,6 +888,7 @@ adminController.getBookingsPendingNotice = async (req, res) => {
   }
 };
 
+// Get all bookings that are currently in notice period
 adminController.getNoticeActiveBookings = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
@@ -1003,7 +999,6 @@ adminController.unsubscribePushTopic = async (req, res) => {
   }
 };
 
-
 adminController.testNotification = async (req, res) => {
 
   try {
@@ -1029,6 +1024,7 @@ adminController.testNotification = async (req, res) => {
 
   }
 };
+
 adminController.sendTestPushToTopic = async (req, res) => {
   try {
     const { topic, title, body, data } = req.body || {};
