@@ -473,9 +473,6 @@ userController.updateUserProfile = async (req, res) => {
   }
 };
 
-
-
-
 // Push notification: register token to user topic
 userController.registerPushToken = async (req, res) => {
   try {
@@ -527,6 +524,157 @@ userController.unsubscribePushTopic = async (req, res) => {
     return res.success(httpStatus.OK, true, `Unsubscribed from ${topic}`);
   } catch (error) {
     return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, 'Unsubscribe failed', error.message);
+  }
+};
+
+// Get complete user history (meeting room bookings + space bookings + invoices)
+userController.getUserHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    // Extract query parameters
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const status = req.query.status;
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'DESC';
+
+    // Import necessary models and utilities
+    const { Op } = require('sequelize');
+    const RoomBooking = require('../models/roomBooking.model');
+    const MeetingRoom = require('../models/meetingRoom.model');
+    const { ZohoBooksService } = require('../config/zoho.config');
+
+    // Build where clause for RoomBooking
+    const roomBookingWhere = { userId };
+    if (startDate && endDate) {
+      roomBookingWhere.bookingDate = {
+        [Op.between]: [new Date(startDate), new Date(endDate)]
+      };
+    } else if (startDate) {
+      roomBookingWhere.bookingDate = { [Op.gte]: new Date(startDate) };
+    } else if (endDate) {
+      roomBookingWhere.bookingDate = { [Op.lte]: new Date(endDate) };
+    }
+    if (status) {
+      roomBookingWhere.status = status;
+    }
+
+    // Build where clause for Space Booking
+    const bookingWhere = { userId };
+    if (startDate && endDate) {
+      bookingWhere[Op.or] = [
+        { startDate: { [Op.between]: [new Date(startDate), new Date(endDate)] } },
+        { endDate: { [Op.between]: [new Date(startDate), new Date(endDate)] } }
+      ];
+    } else if (startDate) {
+      bookingWhere[Op.or] = [
+        { startDate: { [Op.gte]: new Date(startDate) } },
+        { endDate: { [Op.gte]: new Date(startDate) } }
+      ];
+    } else if (endDate) {
+      bookingWhere[Op.or] = [
+        { startDate: { [Op.lte]: new Date(endDate) } },
+        { endDate: { [Op.lte]: new Date(endDate) } }
+      ];
+    }
+    if (status) {
+      bookingWhere.status = status;
+    }
+
+    // Query meeting room bookings
+    const roomBookingsData = await RoomBooking.findAndCountAll({
+      where: roomBookingWhere,
+      include: [{
+        model: MeetingRoom,
+        as: 'meetingRoom',
+        attributes: ['id', 'name', 'capacityType', 'hourlyRate', 'dayRate', 'memberHourlyRate', 'memberDayRate', 'description', 'openTime', 'closeTime']
+      }],
+      order: [[sortBy, sortOrder]],
+      limit,
+      offset,
+      distinct: true
+    });
+
+    // Query space bookings (using existing Booking model)
+    const spaceBookingsData = await Booking.findAndCountAll({
+      where: bookingWhere,
+      include: [{
+        model: Space,
+        as: 'space',
+        attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'price']
+      }],
+      order: [[sortBy, sortOrder]],
+      limit,
+      offset,
+      distinct: true
+    });
+
+    // Fetch invoices from Zoho Books for the user
+    let invoices = [];
+    try {
+      const zohoService = new ZohoBooksService();
+      const allInvoices = await zohoService.getInvoices();
+      
+      // Filter invoices by user email
+      if (allInvoices && allInvoices.invoices) {
+        invoices = allInvoices.invoices.filter(invoice => 
+          invoice.customer_name && 
+          invoice.customer_name.toLowerCase().includes(userEmail.split('@')[0].toLowerCase())
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching invoices from Zoho:', error.message);
+      // Continue without invoices rather than failing the entire request
+    }
+
+    // Calculate pagination metadata
+    const totalMeetingRoomBookings = roomBookingsData.count;
+    const totalSpaceBookings = spaceBookingsData.count;
+    const totalRecords = totalMeetingRoomBookings + totalSpaceBookings;
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    // Prepare response
+    const responseData = {
+      data: {
+        meetingRoomBookings: roomBookingsData.rows.map(booking => booking.toJSON ? booking.toJSON() : booking),
+        spaceBookings: spaceBookingsData.rows.map(booking => booking.toJSON ? booking.toJSON() : booking),
+        payments: invoices
+      },
+      pagination: {
+        total: totalRecords,
+        page,
+        limit,
+        pages: totalPages,
+        meetingRoomBookingsCount: totalMeetingRoomBookings,
+        spaceBookingsCount: totalSpaceBookings
+      },
+      summary: {
+        totalMeetingRoomBookings,
+        totalSpaceBookings,
+        totalPayments: invoices.length
+      }
+    };
+
+    return res.success(
+      httpStatus.OK,
+      true,
+      'User history retrieved successfully',
+      responseData
+    );
+
+  } catch (error) {
+    console.error('Error fetching user history:', error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      'Error retrieving user history',
+      error.message
+    );
   }
 };
 

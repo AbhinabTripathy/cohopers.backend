@@ -42,6 +42,7 @@ bookingController.createBooking = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 //upload payment screenshots
 bookingController.uploadPayment = async (req, res) => {
   try {
@@ -148,4 +149,5 @@ bookingController.getBookingDetails = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 module.exports = bookingController;

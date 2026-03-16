@@ -19,6 +19,9 @@ router.get('/dashboard/membership', authMiddleware, userController.getMembership
 router.get('/dashboard/bookings', authMiddleware, userController.getUserBookings);
 router.get('/dashboard/room-bookings', authMiddleware, userController.getUserRoomBookings);
 
+// User history endpoint - combines all booking and payment history
+router.get('/history', authMiddleware, userController.getUserHistory);
+
 router.get("/profile", authMiddleware, userController.getUserProfile);
 // Update profile (supports profile photo upload)
 router.put(
