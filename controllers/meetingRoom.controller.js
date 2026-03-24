@@ -305,7 +305,6 @@ meetingRoomController.getAmenities = async (req, res) => {
 meetingRoomController.bookRoom = async (req, res) => {
   try {
     const { capacityType, bookingDate, timeSlots:timeSlotString, duration, bookingType, memberType, notes, gst } = req.body;
-    // Parse timeSlots from string to array if it's not already an array
     let timeSlots = timeSlotString;
     if (timeSlotString && typeof timeSlotString === 'string') {
       try {
@@ -343,16 +342,16 @@ meetingRoomController.bookRoom = async (req, res) => {
       );
     }
     
-    // Different validation for members vs non-members
-    if (memberType !== "Member") {
-      // Non-members must provide ID proof
-      if (!req.files || !req.files.idProof) {
-        return res.error(
-          httpStatus.BAD_REQUEST,
-          false,
-          "ID proof is required for non-members"
-        );
-      }
+    // // Different validation for members vs non-members
+    // if (memberType !== "Member") {
+    //   // Non-members must provide ID proof
+    //   if (!req.files || !req.files.idProof) {
+    //     return res.error(
+    //       httpStatus.BAD_REQUEST,
+    //       false,
+      //     "ID proof is required for non-members"
+      //   );
+      // }
       
       // Non-members must provide payment screenshot
       if (!req.files || !req.files.paymentScreenshot) {
@@ -362,7 +361,7 @@ meetingRoomController.bookRoom = async (req, res) => {
           "Payment screenshot is required for non-members"
         );
       }
-    }
+    // }
     
     // Validate duration if provided for hourly bookings
     if (bookingType === "Hourly" && (!duration || !["30 Minutes", "1 Hour"].includes(duration))) {

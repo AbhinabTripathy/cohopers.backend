@@ -49,7 +49,7 @@ const Kyc = sequelize.define('Kyc',{
   // KYC is user-scoped
   userId: {
     type: DataTypes.INTEGER,
-    allowNull: true, // Temporarily allow null for migration
+    allowNull: true, 
     references: {
       model: "users",
       key: "id",

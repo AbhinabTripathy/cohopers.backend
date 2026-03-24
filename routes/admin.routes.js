@@ -45,5 +45,6 @@ router.get('/testNotification' , adminController.testNotification);
 // Admin push test endpoints
 router.post('/push/send-topic', adminAuthMiddleware, adminController.sendTestPushToTopic);
 router.post('/push/send-token', adminAuthMiddleware, adminController.sendTestPushToToken);
+router.get('/test-mail', adminController.testmail);
 
 module.exports = router;

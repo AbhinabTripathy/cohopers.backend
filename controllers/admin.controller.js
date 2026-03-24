@@ -5,6 +5,7 @@ const sequelize = require('../config/db');
 const HttpStatus = require('../enums/httpStatusCode.enum');
 const { sendMail, sendPushToTopic, sendPushToUserTopic, sendPushToToken, subscribeTokenToTopic, unsubscribeTokenFromTopic } = require("../utils/helper")
 const { getNoticeStatus } = require('../utils/noticeHelper');
+const { emailTemplate } = require('../utils/emailTemplate');
 
 
 
@@ -500,7 +501,6 @@ adminController.getDashboardData = async (req, res) => {
        order: [['id', 'ASC']]
      });
  
- 
      // Format the data 
      const formattedMembers = activeBookings.map(booking => {
        return {
@@ -679,6 +679,54 @@ adminController.verifyKyc = async (req, res) => {
 
     kyc.status = status;
     await kyc.save();
+
+    //  Get user details
+    const user = await User.findByPk(kyc.userId);
+
+    //EMAIL and PUSH ONLY IF USER EXISTS
+    if (user) {
+      const emailHtml = emailTemplate({
+        clientName: user.name,
+        companyName: user.companyName || "N/A",
+        amount: "-",
+        date: new Date().toDateString(),
+        bookingType: "KYC",
+        status: status === "Approve" ? "KYC Approved" : "KYC Rejected"
+      });
+
+      // Send Email
+      try {
+        await sendMail(
+          user.email,
+          status === "Approve"
+            ? "KYC Approved - You can now book space"
+            : "KYC Rejected",
+          emailHtml
+        );
+        console.log(`KYC email sent to user ${user.email}`);
+      } catch (e) {
+        console.error("KYC email failed:", e.message);
+      }
+
+      // Push Notification
+      try {
+        await sendPushToUserTopic(user.id, {
+          notification: {
+            title: status === "Approve" ? "KYC Approved" : "KYC Rejected",
+            body:
+              status === "Approve"
+                ? "You can now book space"
+                : "Your KYC was rejected"
+          },
+          data: {
+            type: "kyc_status",
+            status: status
+          }
+        });
+      } catch (e) {
+        console.error("KYC push failed:", e.message);
+      }
+    }
 
     return res.status(HttpStatus.OK).json({
       success: true,
@@ -1054,6 +1102,20 @@ adminController.sendTestPushToToken = async (req, res) => {
     return res.status(HttpStatus.OK).json({ success: true, id });
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to send to token', error: err.message });
+  }
+};
+
+adminController.testmail = async (req, res) => {
+  try {
+    const result = await sendMail(
+      "manoranjanbasantia2002@gmail.com",
+      "Test Email",
+      "<h1>Email Working </h1>"
+    );
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 

@@ -6,11 +6,11 @@ const { sendMail, sendPushToTopic, sendPushToUserTopic } = require('../utils/hel
 
 const bookingController = {} ;
 
-//create boooking 
+//create booking 
 bookingController.createBooking = async (req, res) => {
   try {
     const { spaceId, date, startDate, endDate, amount } = req.body;
-    
+
     const booking = await Booking.create({
       userId: req.user.id,
       spaceId,
@@ -21,23 +21,60 @@ bookingController.createBooking = async (req, res) => {
       originalAmount: amount,
       status: "Pending"
     });
-    
+
+    // Email to admin
+    try {
+      const html = `
+        <h2>New Booking Created</h2>
+        <p><b>Booking ID:</b> ${booking.id}</p>
+        <p><b>User ID:</b> ${booking.userId}</p>
+        <p><b>Space ID:</b> ${booking.spaceId}</p>
+        <p><b>Amount:</b> ₹${booking.amount}</p>
+        <p>Please review this booking in admin panel.</p>
+      `;
+
+      await sendMail(process.env.ADMIN_EMAIL, "New Booking Created", html);
+      console.log(`✓ Email sent to admin for booking #${booking.id}`);
+    } catch (e) {
+      console.error("✗ Booking email failed:", e.message);
+    }
+
+    //  Push Notifications
     try {
       await sendPushToUserTopic(req.user.id, {
-        notification: { title: 'Booking Created', body: `Booking #${booking.id} created` },
-        data: { type: 'booking_created', entity: 'booking', entityId: String(booking.id) }
+        notification: {
+          title: 'Booking Created',
+          body: `Booking #${booking.id} created`
+        },
+        data: {
+          type: 'booking_created',
+          entity: 'booking',
+          entityId: String(booking.id)
+        }
       });
-      
-      // Also broadcast to booking updates topic
+
       await sendPushToTopic('booking_updates', {
-        notification: { title: 'New Booking', body: `Booking #${booking.id} created` },
-        data: { type: 'booking_created', entity: 'booking', entityId: String(booking.id) }
+        notification: {
+          title: 'New Booking',
+          body: `Booking #${booking.id} created`
+        },
+        data: {
+          type: 'booking_created',
+          entity: 'booking',
+          entityId: String(booking.id)
+        }
       });
-      console.log(`✓ Push sent to booking_updates topic for booking #${booking.id}`);
+
+      console.log(`✓ Push sent for booking #${booking.id}`);
     } catch (e) {
-      console.error('✗ Booking push failed:', e);
+      console.error('✗ Booking push failed:', e.message);
     }
-    res.status(201).json({ message: "Booking created successfully", booking });
+
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
