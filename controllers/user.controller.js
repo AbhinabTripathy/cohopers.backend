@@ -32,7 +32,7 @@ userController.register = async (req, res) => {
 
         // Check if user with email or mobile already exists
         const existingUser = await User.findOne({
-            where: { email } // you can add `OR` mobile check here if needed
+            where: { email } 
         });
 
         if (existingUser) {
@@ -586,7 +586,7 @@ userController.getUserHistory = async (req, res) => {
       bookingWhere.status = status;
     }
 
-    // Query meeting room bookings
+    //  meeting room bookings
     const roomBookingsData = await RoomBooking.findAndCountAll({
       where: roomBookingWhere,
       include: [{
@@ -600,7 +600,7 @@ userController.getUserHistory = async (req, res) => {
       distinct: true
     });
 
-    // Query space bookings (using existing Booking model)
+    //  space bookings (using existing Booking model)
     const spaceBookingsData = await Booking.findAndCountAll({
       where: bookingWhere,
       include: [{

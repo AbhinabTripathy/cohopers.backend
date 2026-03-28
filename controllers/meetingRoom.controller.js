@@ -3,6 +3,9 @@ const MeetingRoom = require("../models/meetingRoom.model");
 const RoomBooking = require("../models/roomBooking.model");
 const User = require("../models/user.model")
 const { Op } = require("sequelize");
+const { sendMail, sendPushToUserTopic, sendPushToTopic } = require("../utils/helper");
+const { emailTemplate } = require("../utils/emailTemplate");
+
 
 const meetingRoomController = {};
 
@@ -221,7 +224,6 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
     }
 
     // Include both 'pending' and 'confirmed' so slots are blocked once a user books & uploads payment.
-    // If you don't want to block on pending, change this array to ['confirmed'] only.
     const bookedStatuses = ['pending', 'confirmed'];
 
     const existingBookings = await RoomBooking.findAll({
@@ -266,7 +268,7 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
       {
         availableSlots,
         bookedSlots: [...bookedSet].map(s => {
-          // convert back to readable format (insert space around dash) if you want
+          // convert back to readable format (insert space around dash) 
           return s.replace('-', ' - ');
         }),
         openTime,
@@ -472,6 +474,86 @@ meetingRoomController.bookRoom = async (req, res) => {
     
     // Create booking
     const booking = await RoomBooking.create(bookingData);
+    // EMAIL and PUSH NOTIFICATIONS
+try {
+  
+
+  // Prepare common data
+  const emailData = {
+    clientName: userName,
+    companyName: req.user.companyName || "N/A",
+    amount: booking.totalAmount,
+    date: booking.bookingDate,
+    bookingType: "Meeting Room",
+    status: booking.status === "confirmed" ? "Confirmed" : "Pending"
+  };
+
+  const html = emailTemplate(emailData);
+
+  //  Email to Admin
+  try {
+    await sendMail(
+      process.env.ADMIN_EMAIL,
+      "New Meeting Room Booking",
+      html
+    );
+    console.log(`Admin email sent for meeting booking #${booking.id}`);
+  } catch (e) {
+    console.error("Admin email failed:", e.message);
+  }
+
+  // Email to User
+  try {
+    await sendMail(
+      userEmail,
+      booking.status === "confirmed"
+        ? "Meeting Room Booking Confirmed"
+        : "Meeting Room Booking Pending",
+      html
+    );
+    console.log(` User email sent to ${userEmail}`);
+  } catch (e) {
+    console.error(" User email failed:", e.message);
+  }
+
+  //  Push to User
+  try {
+    await sendPushToUserTopic(userId, {
+      notification: {
+        title: "Meeting Room Booking",
+        body:
+          booking.status === "confirmed"
+            ? "Your booking is confirmed"
+            : "Your booking is pending verification"
+      },
+      data: {
+        type: "meeting_booking",
+        bookingId: String(booking.id)
+      }
+    });
+  } catch (e) {
+    console.error(" Push to user failed:", e.message);
+  }
+
+  //  Push to Admin Topic
+  try {
+    await sendPushToTopic("admins", {
+      notification: {
+        title: "New Meeting Booking",
+        body: `Booking #${booking.id}`
+      },
+      data: {
+        type: "meeting_booking",
+        bookingId: String(booking.id)
+      }
+    });
+  } catch (e) {
+    console.error("Push to admin failed:", e.message);
+  }
+
+} catch (err) {
+  console.error("Notification system error:", err.message);
+}
     
     const responseMessage = memberType === "Member" 
       ? "Meeting room booked successfully. Your booking is confirmed." 
@@ -500,63 +582,123 @@ meetingRoomController.bookRoom = async (req, res) => {
   }
 };
 
-//  for admin to verify bookings 
- meetingRoomController.verifyBooking = async (req, res) => { 
-   try { 
-     const { bookingId } = req.params; 
-     const { status } = req.body; 
-     
-     if (!bookingId) { 
-       return res.error( 
-         httpStatus.BAD_REQUEST, 
-         false, 
-         "Booking ID is required" 
-       ); 
-     } 
-     
-     if (!status || !['Confirm', 'Reject'].includes(status)) {
-       return res.error(
-         httpStatus.BAD_REQUEST,
-         false,
-         "Status must be either 'Confirm' or 'Reject'"
-       );
-     }
-     
-     // Find the booking 
-     const booking = await RoomBooking.findByPk(bookingId); 
-     
-     if (!booking) { 
-       return res.error( 
-         httpStatus.NOT_FOUND, 
-         false, 
-         "Booking not found" 
-       ); 
-     } 
-     
-     // Update booking status based on request body
-     await booking.update({ status }); 
-     
-    // Get room details 
+// for admin to verify bookings 
+meetingRoomController.verifyBooking = async (req, res) => { 
+  try { 
+    const { bookingId } = req.params; 
+    const { status } = req.body; 
+    
+    if (!bookingId) { 
+      return res.error(httpStatus.BAD_REQUEST, false, "Booking ID is required"); 
+    } 
+    
+    if (!status || !['Confirm', 'Reject'].includes(status)) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "Status must be either 'Confirm' or 'Reject'"
+      );
+    }
+    
+    // Find booking
+    const booking = await RoomBooking.findByPk(bookingId); 
+    
+    if (!booking) { 
+      return res.error(httpStatus.NOT_FOUND, false, "Booking not found"); 
+    } 
+    
+    // Update status
+    await booking.update({ status }); 
+    
+    // Get room details
     const room = await MeetingRoom.findByPk(booking.meetingRoomId); 
+
+    //  EMAIL + PUSH 
+    try {
+      const emailData = {
+        clientName: booking.username,
+        companyName: booking.companyName || "N/A",
+        amount: booking.totalAmount,
+        date: booking.bookingDate,
+        bookingType: "Meeting Room",
+        status: status === "Confirm" ? "Confirmed" : "Rejected"
+      };
+
+      const html = emailTemplate(emailData);
+
+      // Email to User
+      try {
+        await sendMail(
+          booking.email,
+          `Meeting Room ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
+          html
+        );
+        console.log(`✓ Email sent to user ${booking.email}`);
+      } catch (e) {
+        console.error("✗ User email failed:", e.message);
+      }
+
      
-     const message = status === 'confirmed' ? "Booking confirmed successfully" : "Booking cancelled successfully";
-     
-     return res.success( 
-       httpStatus.OK, 
-       true, 
-       message, 
-       booking 
-     ); 
-   } catch (error) { 
-     console.error("Error verifying booking:", error); 
-     return res.error( 
-       httpStatus.INTERNAL_SERVER_ERROR, 
-       false, 
-       "Internal server error", 
-       error 
-     ); 
-   } 
- };
+      //  Push to User
+      try {
+        await sendPushToUserTopic(booking.userId, {
+          notification: {
+            title: `Meeting Room ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
+            body: `Booking #${booking.id}`
+          },
+          data: {
+            type: "meeting_booking_status",
+            bookingId: String(booking.id),
+            status: status
+          }
+        });
+      } catch (e) {
+        console.error("✗ Push user failed:", e.message);
+      }
+
+      // Push to Admin Topic
+      try {
+        await sendPushToTopic("admins", {
+          notification: {
+            title: `Meeting Booking ${status}`,
+            body: `Booking #${booking.id}`
+          },
+          data: {
+            type: "meeting_booking_status",
+            bookingId: String(booking.id),
+            status: status
+          }
+        });
+      } catch (e) {
+        console.error("✗ Push admin failed:", e.message);
+      }
+
+    } catch (err) {
+      console.error("Notification system error:", err.message);
+    }
+
+    const message =
+      status === "Confirm"
+        ? "Booking confirmed successfully"
+        : "Booking rejected successfully";
+
+    return res.success(
+      httpStatus.OK,
+      true,
+      message,
+      booking
+    ); 
+
+  } catch (error) { 
+    console.error("Error verifying booking:", error); 
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error
+    ); 
+  } 
+};
 
 // Whole-day availability by month (free vs booked days)
 meetingRoomController.getAvailableDays = async (req, res) => {

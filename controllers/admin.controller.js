@@ -95,7 +95,7 @@ adminController.login = async (req, res) => {
       });
     }
 
-    // Use the same trimmed secret used across the app. Fall back to TOKEN_SECRET if set.
+    // Use the same trimmed secret used across the app
     const SECRET = (process.env.APP_SUPER_SECRET_KEY || process.env.TOKEN_SECRET || '').trim();
     if (!SECRET) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
@@ -303,40 +303,47 @@ adminController.verifySpaceBooking = async (req, res) => {
         notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
         data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
       });
-      console.log(`✓ Push sent to topic user_${booking.userId}: ${pushId}`);
+      console.log(` Push sent to topic user_${booking.userId}: ${pushId}`);
       
       // Also broadcast to booking updates topic
       await sendPushToTopic('booking_updates', {
         notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
         data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
       });
-      console.log(`✓ Push sent to topic booking_updates: ${pushId}`);
+      console.log(`Push sent to topic booking_updates: ${pushId}`);
     } catch (e) {
-      console.error('✗ Push send failed:', e);
+      console.error('Push send failed:', e);
     }
 
     // Send email notification to user
-    const emailSubject = `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`;
-    const emailMessage = `
-      <p>Dear ${booking.user.userName},</p>
-      <p>Your booking for ${booking.space.spaceName} (Room ${booking.space.roomNumber}${booking.space.cabinNumber}) has been ${status === "Confirm" ? "confirmed" : "rejected"}.</p>
-      ${remarks ? `<p>Remarks: ${remarks}</p>` : ''}
-      <p>Booking Details:</p>
-      <ul>
-        <li>Booking ID: ${booking.id}</li>
-        <li>Space: ${booking.space.spaceName}</li>    
-        <li>Room: ${booking.space.roomNumber}${booking.space.cabinNumber}</li>
-        <li>Date: ${booking.date}</li>
-        <li>Start Date: ${booking.startDate}</li>
-        <li>End Date: ${booking.endDate}</li>
-        <li>Amount: ${booking.amount}</li>
-        ${booking.originalAmount ? `<li>Listed Amount: ${booking.originalAmount}</li>` : ''}
-        ${booking.negotiatedAmount ? `<li>Negotiated Amount: ${booking.negotiatedAmount}</li>` : ''}
-      </ul>
-      <p>Thank you for choosing CoHopers!</p>
-    `;
+    try {
 
-    await sendMail(booking.user.email, emailSubject, emailMessage);
+  const emailData = {
+    clientName: booking.user.userName,
+    companyName: booking.kyc?.companyName || "N/A",
+    amount: booking.amount,
+    date: booking.date,
+    bookingType: "Space Booking",
+    status: status === "Confirm" ? "Confirmed" : "Rejected"
+  };
+
+  const html = emailTemplate(emailData);
+
+  // Send to User
+  await sendMail(
+    booking.user.email,
+    `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
+    html
+  );
+
+  console.log(`Email sent to user ${booking.user.email}`);
+
+  
+
+
+} catch (e) {
+  console.error("Email sending failed:", e.message);
+}
 
     res.status(HttpStatus.OK).json({
       success: true,

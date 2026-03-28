@@ -34,9 +34,9 @@ bookingController.createBooking = async (req, res) => {
       `;
 
       await sendMail(process.env.ADMIN_EMAIL, "New Booking Created", html);
-      console.log(`✓ Email sent to admin for booking #${booking.id}`);
+      console.log(` Email sent to admin for booking #${booking.id}`);
     } catch (e) {
-      console.error("✗ Booking email failed:", e.message);
+      console.error(" Booking email failed:", e.message);
     }
 
     //  Push Notifications
@@ -65,9 +65,9 @@ bookingController.createBooking = async (req, res) => {
         }
       });
 
-      console.log(`✓ Push sent for booking #${booking.id}`);
+      console.log(`Push sent for booking #${booking.id}`);
     } catch (e) {
-      console.error('✗ Booking push failed:', e.message);
+      console.error('Booking push failed:', e.message);
     }
 
     res.status(201).json({
