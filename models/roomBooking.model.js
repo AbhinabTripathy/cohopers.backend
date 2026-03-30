@@ -72,13 +72,13 @@ const RoomBooking = sequelize.define(
     },
     paymentScreenshot: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
   },
   {
     timestamps: true,
     tableName: "room_bookings",
-  }
+  },
 );
 
 module.exports = RoomBooking;

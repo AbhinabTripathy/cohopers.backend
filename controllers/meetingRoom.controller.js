@@ -1,33 +1,31 @@
 const httpStatus = require("../enums/httpStatusCode.enum");
 const MeetingRoom = require("../models/meetingRoom.model");
 const RoomBooking = require("../models/roomBooking.model");
-const User = require("../models/user.model")
+const User = require("../models/user.model");
 const { Op } = require("sequelize");
-const { sendMail, sendPushToUserTopic, sendPushToTopic } = require("../utils/helper");
+const {
+  sendMail,
+  sendPushToUserTopic,
+  sendPushToTopic,
+} = require("../utils/helper");
 const { emailTemplate } = require("../utils/emailTemplate");
-
 
 const meetingRoomController = {};
 
 // Get room types (seating capacities)
 meetingRoomController.getRoomTypes = async (req, res) => {
   try {
-    return res.success(
-      httpStatus.OK,
-      true,
-      "Room types fetched successfully",
-      [
-        { id: 1, name: "4-6 Seater" },
-        { id: 2, name: "10-12 Seater" }
-      ]
-    );
+    return res.success(httpStatus.OK, true, "Room types fetched successfully", [
+      { id: 1, name: "4-6 Seater" },
+      { id: 2, name: "10-12 Seater" },
+    ]);
   } catch (error) {
     console.error("Error fetching room types:", error);
     return res.error(
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
+      error,
     );
   }
 };
@@ -41,8 +39,8 @@ meetingRoomController.getBookingTypes = async (req, res) => {
       "Booking types fetched successfully",
       [
         { id: 1, name: "Hourly" },
-        { id: 2, name: "Whole Day" }
-      ]
+        { id: 2, name: "Whole Day" },
+      ],
     );
   } catch (error) {
     console.error("Error fetching booking types:", error);
@@ -50,7 +48,7 @@ meetingRoomController.getBookingTypes = async (req, res) => {
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
+      error,
     );
   }
 };
@@ -64,8 +62,8 @@ meetingRoomController.getMemberTypes = async (req, res) => {
       "Member types fetched successfully",
       [
         { id: 1, name: "Member" },
-        { id: 2, name: "Non-Member" }
-      ]
+        { id: 2, name: "Non-Member" },
+      ],
     );
   } catch (error) {
     console.error("Error fetching member types:", error);
@@ -73,7 +71,7 @@ meetingRoomController.getMemberTypes = async (req, res) => {
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
+      error,
     );
   }
 };
@@ -87,21 +85,17 @@ meetingRoomController.getRoomPricing = async (req, res) => {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Capacity type, booking type, and member type are required"
+        "Capacity type, booking type, and member type are required",
       );
     }
 
     // Find room by capacity type
     const room = await MeetingRoom.findOne({
-      where: { capacityType }
+      where: { capacityType },
     });
-    
+
     if (!room) {
-      return res.error(
-        httpStatus.NOT_FOUND,
-        false,
-        "Meeting room not found"
-      );
+      return res.error(httpStatus.NOT_FOUND, false, "Meeting room not found");
     }
 
     let price;
@@ -124,8 +118,11 @@ meetingRoomController.getRoomPricing = async (req, res) => {
         memberType,
         capacityType,
         includesGST: bookingType === "Whole Day" ? true : false,
-        note: bookingType === "Hourly" ? "GST will be added to the hourly rate" : "GST is included in the day rate"
-      }
+        note:
+          bookingType === "Hourly"
+            ? "GST will be added to the hourly rate"
+            : "GST is included in the day rate",
+      },
     );
   } catch (error) {
     console.error("Error fetching room pricing:", error);
@@ -133,66 +130,66 @@ meetingRoomController.getRoomPricing = async (req, res) => {
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
+      error,
     );
   }
 };
 
 // Helper function to convert time from 12-hour to 24-hour format
 const convertTo24Hour = (time12h) => {
-  const [time, modifier] = time12h.split(' ');
-  let [hours, minutes] = time.split(':');
-  
-  if (hours === '12') {
-    hours = '00';
+  const [time, modifier] = time12h.split(" ");
+  let [hours, minutes] = time.split(":");
+
+  if (hours === "12") {
+    hours = "00";
   }
-  
-  if (modifier === 'PM') {
+
+  if (modifier === "PM") {
     hours = parseInt(hours, 10) + 12;
   }
-  
+
   return `${hours}:${minutes}`;
 };
 
 // Helper function to generate time slots
 const generateTimeSlots = (openTime, closeTime, durationMinutes) => {
   const slots = [];
-  const [openHour, openMinute] = openTime.split(':').map(Number);
-  const [closeHour, closeMinute] = closeTime.split(':').map(Number);
-  
+  const [openHour, openMinute] = openTime.split(":").map(Number);
+  const [closeHour, closeMinute] = closeTime.split(":").map(Number);
+
   let currentHour = openHour;
   let currentMinute = openMinute;
-  
+
   while (
-    currentHour < closeHour || 
+    currentHour < closeHour ||
     (currentHour === closeHour && currentMinute < closeMinute)
   ) {
-    const startHour = currentHour.toString().padStart(2, '0');
-    const startMinute = currentMinute.toString().padStart(2, '0');
-    
+    const startHour = currentHour.toString().padStart(2, "0");
+    const startMinute = currentMinute.toString().padStart(2, "0");
+
     // Calculate end time
     let endMinute = currentMinute + durationMinutes;
     let endHour = currentHour;
-    
+
     if (endMinute >= 60) {
       endHour += Math.floor(endMinute / 60);
       endMinute %= 60;
     }
-    
+
     // Skip if end time is after closing time
     if (
-      endHour > closeHour || 
+      endHour > closeHour ||
       (endHour === closeHour && endMinute > closeMinute)
     ) {
       break;
     }
-    
-    const endHourStr = endHour.toString().padStart(2, '0');
-    const endMinuteStr = endMinute.toString().padStart(2, '0');
-    
+
+    const endHourStr = endHour.toString().padStart(2, "0");
+    const endMinuteStr = endMinute.toString().padStart(2, "0");
+
     // Format: "09:00 - 09:30"
     slots.push(`${startHour}:${startMinute} - ${endHourStr}:${endMinuteStr}`);
-    
+
     // Move to next slot
     currentMinute += durationMinutes;
     if (currentMinute >= 60) {
@@ -200,7 +197,7 @@ const generateTimeSlots = (openTime, closeTime, durationMinutes) => {
       currentMinute %= 60;
     }
   }
-  
+
   return slots;
 };
 
@@ -213,7 +210,7 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Date, Capacity & Member type are required"
+        "Date, Capacity & Member type are required",
       );
     }
 
@@ -224,14 +221,14 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
     }
 
     // Include both 'pending' and 'confirmed' so slots are blocked once a user books & uploads payment.
-    const bookedStatuses = ['pending', 'confirmed'];
+    const bookedStatuses = ["pending", "confirmed"];
 
     const existingBookings = await RoomBooking.findAll({
       where: {
         meetingRoomId: room.id,
         bookingDate: date,
-        status: { [Op.in]: bookedStatuses }
-      }
+        status: { [Op.in]: bookedStatuses },
+      },
     });
 
     // Generate all possible time slots (assumes generateTimeSlots returns strings like "09:00 - 09:30")
@@ -240,7 +237,7 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
 
     // If non-member must see 1-hour slots adjust duration and (optionally) closeTime
     let durationMinutes = 30;
-    if (String(memberType).toLowerCase().includes('non')) {
+    if (String(memberType).toLowerCase().includes("non")) {
       durationMinutes = 60;
       // If you want non-members to see closeTime as 06:00 rather than 06:30:
       if (closeTime === "06:30 PM") closeTime = "06:00 PM";
@@ -248,18 +245,24 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
 
     const openHour = convertTo24Hour(openTime);
     const closeHour = convertTo24Hour(closeTime);
-    const allTimeSlots = generateTimeSlots(openHour, closeHour, durationMinutes);
+    const allTimeSlots = generateTimeSlots(
+      openHour,
+      closeHour,
+      durationMinutes,
+    );
 
     // Collect booked slots from DB
-    const bookedSlotsRaw = existingBookings.flatMap(b => b.timeSlots || []);
+    const bookedSlotsRaw = existingBookings.flatMap((b) => b.timeSlots || []);
 
     // Normalization helper: remove spaces so "09:00 - 10:00" and "09:00-10:00" compare equal
-    const normalize = s => (s || '').toString().replace(/\s+/g, '');
+    const normalize = (s) => (s || "").toString().replace(/\s+/g, "");
 
     const bookedSet = new Set(bookedSlotsRaw.map(normalize));
 
     // Filter out booked slots using normalized comparison
-    const availableSlots = allTimeSlots.filter(slot => !bookedSet.has(normalize(slot)));
+    const availableSlots = allTimeSlots.filter(
+      (slot) => !bookedSet.has(normalize(slot)),
+    );
 
     return res.success(
       httpStatus.OK,
@@ -267,38 +270,41 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
       "Available time slots fetched successfully",
       {
         availableSlots,
-        bookedSlots: [...bookedSet].map(s => {
-          // convert back to readable format (insert space around dash) 
-          return s.replace('-', ' - ');
+        bookedSlots: [...bookedSet].map((s) => {
+          // convert back to readable format (insert space around dash)
+          return s.replace("-", " - ");
         }),
         openTime,
         closeTime,
         slotDuration: `${durationMinutes} Minutes`,
-        memberType
-      }
+        memberType,
+      },
     );
   } catch (error) {
     console.error("Error fetching available time slots:", error);
-    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Internal server error", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error,
+    );
   }
 };
 
 // Get available amenities
 meetingRoomController.getAmenities = async (req, res) => {
   try {
-    return res.success(
-      httpStatus.OK,
-      true,
-      "Amenities fetched successfully",
-      ["Tea", "Coffee",]
-    );
+    return res.success(httpStatus.OK, true, "Amenities fetched successfully", [
+      "Tea",
+      "Coffee",
+    ]);
   } catch (error) {
     console.error("Error fetching amenities:", error);
     return res.error(
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
+      error,
     );
   }
 };
@@ -306,95 +312,109 @@ meetingRoomController.getAmenities = async (req, res) => {
 // Book a meeting room & upload payment screenshot
 meetingRoomController.bookRoom = async (req, res) => {
   try {
-    const { capacityType, bookingDate, timeSlots:timeSlotString, duration, bookingType, memberType, notes, gst } = req.body;
+    const {
+      capacityType,
+      bookingDate,
+      timeSlots: timeSlotString,
+      duration,
+      bookingType,
+      memberType,
+      notes,
+      gst,
+    } = req.body;
     let timeSlots = timeSlotString;
-    if (timeSlotString && typeof timeSlotString === 'string') {
+    if (timeSlotString && typeof timeSlotString === "string") {
       try {
         timeSlots = JSON.parse(timeSlotString);
       } catch (e) {
         // If it's a comma-separated string, convert to array
-        timeSlots = timeSlotString.split(',').map(slot => slot.trim());
+        timeSlots = timeSlotString.split(",").map((slot) => slot.trim());
       }
     }
-    
+
     // Ensure timeSlots is an array
     if (timeSlots && !Array.isArray(timeSlots)) {
       timeSlots = [timeSlots];
     }
-    
+
     // Get customer information from authenticated user
     if (!req.user) {
       return res.error(
         httpStatus.UNAUTHORIZED,
         false,
-        "Unauthorized: missing or invalid token"
+        "Unauthorized: missing or invalid token",
       );
     }
     const userName = req.user.username;
     const userEmail = req.user.email;
     const userPhone = req.user.mobile;
-    const userId = req.user.id; 
-    
+    const userId = req.user.id;
+
     // Check for required fields
     if (!capacityType || !bookingDate || !bookingType || !memberType) {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Required fields are missing"
+        "Required fields are missing",
       );
     }
-    
+
     // // Different validation for members vs non-members
-    // if (memberType !== "Member") {
+    //if (memberType !== "Member") {
     //   // Non-members must provide ID proof
     //   if (!req.files || !req.files.idProof) {
     //     return res.error(
     //       httpStatus.BAD_REQUEST,
     //       false,
-      //     "ID proof is required for non-members"
-      //   );
-      // }
-      
-      // Non-members must provide payment screenshot
+    //     "ID proof is required for non-members"
+    //   );
+    // }
+
+    // Non-members must provide payment screenshot
+    if (memberType !== "Member") {
       if (!req.files || !req.files.paymentScreenshot) {
         return res.error(
           httpStatus.BAD_REQUEST,
           false,
-          "Payment screenshot is required for non-members"
+          "Payment screenshot is required for non-members",
         );
       }
+    }
     // }
-    
+
     // Validate duration if provided for hourly bookings
-    if (bookingType === "Hourly" && (!duration || !["30 Minutes", "1 Hour"].includes(duration))) {
+    if (
+      bookingType === "Hourly" &&
+      (!duration || !["30 Minutes", "1 Hour"].includes(duration))
+    ) {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Duration must be either '30 Minutes' or '1 Hour' for hourly bookings"
+        "Duration must be either '30 Minutes' or '1 Hour' for hourly bookings",
       );
     }
-    
+
     // Find room by capacity type
     const room = await MeetingRoom.findOne({
-      where: { capacityType }
+      where: { capacityType },
     });
-    
+
     if (!room) {
-      return res.error(
-        httpStatus.NOT_FOUND,
-        false,
-        "Meeting room not found"
-      );
+      return res.error(httpStatus.NOT_FOUND, false, "Meeting room not found");
     }
-    
+
     // Calculate price based on booking type and member type
     let basePrice;
     if (bookingType === "Hourly") {
-      basePrice = parseInt(memberType === "Member" ? room.memberHourlyRate : room.hourlyRate);
+      basePrice = parseInt(
+        memberType === "Member" ? room.memberHourlyRate : room.hourlyRate,
+      );
     } else {
-      basePrice = parseInt(memberType === "Member" ? room.memberDayRate : room.dayRate);
+      basePrice = parseInt(
+        memberType === "Member" ? room.memberDayRate : room.dayRate,
+      );
     }
-    
+
     // Calculate total amount
     let totalAmount;
     if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
@@ -409,36 +429,38 @@ meetingRoomController.bookRoom = async (req, res) => {
       // For whole day bookings, GST is already included
       totalAmount = basePrice;
     }
-    
+
     // Check for availability if hourly booking
     if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
       const existingBookings = await RoomBooking.findAll({
         where: {
           meetingRoomId: room.id,
           bookingDate,
-          status: "confirmed"
-        }
+          status: "confirmed",
+        },
       });
-      
+
       // Check for time slot conflicts
       const bookedSlots = [];
-      existingBookings.forEach(booking => {
+      existingBookings.forEach((booking) => {
         if (booking.timeSlots && Array.isArray(booking.timeSlots)) {
           bookedSlots.push(...booking.timeSlots);
         }
       });
-      
+
       // Check if any requested slot is already booked
-      const conflictingSlots = timeSlots.filter(slot => bookedSlots.includes(slot));
+      const conflictingSlots = timeSlots.filter((slot) =>
+        bookedSlots.includes(slot),
+      );
       if (conflictingSlots.length > 0) {
         return res.error(
           httpStatus.CONFLICT,
           false,
-          `The following time slots are already booked: ${conflictingSlots.join(", ")}`
+          `The following time slots are already booked: ${conflictingSlots.join(", ")}`,
         );
       }
     }
-    
+
     // Prepare file paths
     const bookingData = {
       meetingRoomId: room.id,
@@ -452,11 +474,11 @@ meetingRoomController.bookRoom = async (req, res) => {
       bookingType,
       memberType,
       totalAmount: parseFloat(totalAmount.toFixed(2)),
-      status: memberType === "Member" ? "confirmed" : "pending", // Auto-confirm for members
+      status: memberType === "Member" ? "confirm" : "pending", // Auto-confirm for members
       notes,
-      gst: gst || null
+      gst: gst || null,
     };
-    
+
     // Add file paths for non-members
     if (memberType !== "Member") {
       if (req.files.paymentScreenshot) {
@@ -469,151 +491,144 @@ meetingRoomController.bookRoom = async (req, res) => {
         bookingData.certificateOfIncorporation = `/uploads/meeting-rooms/${req.files.coi[0].filename}`;
       }
     } else {
-      bookingData.paymentScreenshot = "member-no-payment-required";
+      bookingData.paymentScreenshot = null;
     }
-    
+
     // Create booking
     const booking = await RoomBooking.create(bookingData);
     // EMAIL and PUSH NOTIFICATIONS
-try {
-  
+    try {
+      // Prepare common data
+      const emailData = {
+        clientName: userName,
+        companyName: req.user.companyName || "N/A",
+        amount: booking.totalAmount,
+        date: booking.bookingDate,
+        bookingType: "Meeting Room",
+        status: booking.status === "confirmed" ? "Confirmed" : "Pending",
+      };
 
-  // Prepare common data
-  const emailData = {
-    clientName: userName,
-    companyName: req.user.companyName || "N/A",
-    amount: booking.totalAmount,
-    date: booking.bookingDate,
-    bookingType: "Meeting Room",
-    status: booking.status === "confirmed" ? "Confirmed" : "Pending"
-  };
+      const html = emailTemplate(emailData);
 
-  const html = emailTemplate(emailData);
+      //  Email to Admin
+      try {
+        await sendMail(
+          process.env.ADMIN_EMAIL,
+          "New Meeting Room Booking",
+          html,
+        );
+        console.log(`Admin email sent for meeting booking #${booking.id}`);
+      } catch (e) {
+        console.error("Admin email failed:", e.message);
+      }
 
-  //  Email to Admin
-  try {
-    await sendMail(
-      process.env.ADMIN_EMAIL,
-      "New Meeting Room Booking",
-      html
-    );
-    console.log(`Admin email sent for meeting booking #${booking.id}`);
-  } catch (e) {
-    console.error("Admin email failed:", e.message);
-  }
-
-  // Email to User
-  try {
-    await sendMail(
-      userEmail,
-      booking.status === "confirmed"
-        ? "Meeting Room Booking Confirmed"
-        : "Meeting Room Booking Pending",
-      html
-    );
-    console.log(` User email sent to ${userEmail}`);
-  } catch (e) {
-    console.error(" User email failed:", e.message);
-  }
-
-  //  Push to User
-  try {
-    await sendPushToUserTopic(userId, {
-      notification: {
-        title: "Meeting Room Booking",
-        body:
+      // Email to User
+      try {
+        await sendMail(
+          userEmail,
           booking.status === "confirmed"
-            ? "Your booking is confirmed"
-            : "Your booking is pending verification"
-      },
-      data: {
-        type: "meeting_booking",
-        bookingId: String(booking.id)
+            ? "Meeting Room Booking Confirmed"
+            : "Meeting Room Booking Pending",
+          html,
+        );
+        console.log(` User email sent to ${userEmail}`);
+      } catch (e) {
+        console.error(" User email failed:", e.message);
       }
-    });
-  } catch (e) {
-    console.error(" Push to user failed:", e.message);
-  }
 
-  //  Push to Admin Topic
-  try {
-    await sendPushToTopic("admins", {
-      notification: {
-        title: "New Meeting Booking",
-        body: `Booking #${booking.id}`
-      },
-      data: {
-        type: "meeting_booking",
-        bookingId: String(booking.id)
+      //  Push to User
+      try {
+        await sendPushToUserTopic(userId, {
+          notification: {
+            title: "Meeting Room Booking",
+            body:
+              booking.status === "confirmed"
+                ? "Your booking is confirmed"
+                : "Your booking is pending verification",
+          },
+          data: {
+            type: "meeting_booking",
+            bookingId: String(booking.id),
+          },
+        });
+      } catch (e) {
+        console.error(" Push to user failed:", e.message);
       }
-    });
-  } catch (e) {
-    console.error("Push to admin failed:", e.message);
-  }
 
-} catch (err) {
-  console.error("Notification system error:", err.message);
-}
-    
-    const responseMessage = memberType === "Member" 
-      ? "Meeting room booked successfully. Your booking is confirmed." 
-      : "Meeting room booked successfully. Your booking is pending admin verification.";
-    
-    return res.success(
-      httpStatus.CREATED,
-      true,
-      responseMessage,
-      {
-        booking,
-        roomName: room.name,
-        roomType: room.capacityType,
-        totalAmount: booking.totalAmount,
-        status: booking.status
+      //  Push to Admin Topic
+      try {
+        await sendPushToTopic("admins", {
+          notification: {
+            title: "New Meeting Booking",
+            body: `Booking #${booking.id}`,
+          },
+          data: {
+            type: "meeting_booking",
+            bookingId: String(booking.id),
+          },
+        });
+      } catch (e) {
+        console.error("Push to admin failed:", e.message);
       }
-    );
+    } catch (err) {
+      console.error("Notification system error:", err.message);
+    }
+
+    const responseMessage =
+      memberType === "Member"
+        ? "Meeting room booked successfully. Your booking is confirmed."
+        : "Meeting room booked successfully. Your booking is pending admin verification.";
+
+    return res.success(httpStatus.CREATED, true, responseMessage, {
+      booking,
+      roomName: room.name,
+      roomType: room.capacityType,
+      totalAmount: booking.totalAmount,
+      status: booking.status,
+    });
   } catch (error) {
     console.error("Error booking meeting room:", error);
     return res.error(
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
+      error,
     );
   }
 };
 
-// for admin to verify bookings 
-meetingRoomController.verifyBooking = async (req, res) => { 
-  try { 
-    const { bookingId } = req.params; 
-    const { status } = req.body; 
-    
-    if (!bookingId) { 
-      return res.error(httpStatus.BAD_REQUEST, false, "Booking ID is required"); 
-    } 
-    
-    if (!status || !['Confirm', 'Reject'].includes(status)) {
+// for admin to verify bookings
+meetingRoomController.verifyBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { status } = req.body;
+
+    if (!bookingId) {
+      return res.error(httpStatus.BAD_REQUEST, false, "Booking ID is required");
+    }
+
+    if (!status || !["Confirm", "Reject"].includes(status)) {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "Status must be either 'Confirm' or 'Reject'"
+        "Status must be either 'Confirm' or 'Reject'",
       );
     }
-    
-    // Find booking
-    const booking = await RoomBooking.findByPk(bookingId); 
-    
-    if (!booking) { 
-      return res.error(httpStatus.NOT_FOUND, false, "Booking not found"); 
-    } 
-    
-    // Update status
-    await booking.update({ status }); 
-    
-    // Get room details
-    const room = await MeetingRoom.findByPk(booking.meetingRoomId); 
 
-    //  EMAIL + PUSH 
+    // Find booking
+    const booking = await RoomBooking.findByPk(bookingId);
+
+    if (!booking) {
+      return res.error(httpStatus.NOT_FOUND, false, "Booking not found");
+    }
+
+    // Update status
+    await booking.update({ status });
+
+    // Get room details
+    const room = await MeetingRoom.findByPk(booking.meetingRoomId);
+
+    //  EMAIL + PUSH
     try {
       const emailData = {
         clientName: booking.username,
@@ -621,7 +636,7 @@ meetingRoomController.verifyBooking = async (req, res) => {
         amount: booking.totalAmount,
         date: booking.bookingDate,
         bookingType: "Meeting Room",
-        status: status === "Confirm" ? "Confirmed" : "Rejected"
+        status: status === "Confirm" ? "Confirmed" : "Rejected",
       };
 
       const html = emailTemplate(emailData);
@@ -631,29 +646,28 @@ meetingRoomController.verifyBooking = async (req, res) => {
         await sendMail(
           booking.email,
           `Meeting Room ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
-          html
+          html,
         );
-        console.log(`✓ Email sent to user ${booking.email}`);
+        console.log(`Email sent to user ${booking.email}`);
       } catch (e) {
-        console.error("✗ User email failed:", e.message);
+        console.error(" User email failed:", e.message);
       }
 
-     
       //  Push to User
       try {
         await sendPushToUserTopic(booking.userId, {
           notification: {
             title: `Meeting Room ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
-            body: `Booking #${booking.id}`
+            body: `Booking #${booking.id}`,
           },
           data: {
             type: "meeting_booking_status",
             bookingId: String(booking.id),
-            status: status
-          }
+            status: status,
+          },
         });
       } catch (e) {
-        console.error("✗ Push user failed:", e.message);
+        console.error("Push user failed:", e.message);
       }
 
       // Push to Admin Topic
@@ -661,18 +675,17 @@ meetingRoomController.verifyBooking = async (req, res) => {
         await sendPushToTopic("admins", {
           notification: {
             title: `Meeting Booking ${status}`,
-            body: `Booking #${booking.id}`
+            body: `Booking #${booking.id}`,
           },
           data: {
             type: "meeting_booking_status",
             bookingId: String(booking.id),
-            status: status
-          }
+            status: status,
+          },
         });
       } catch (e) {
-        console.error("✗ Push admin failed:", e.message);
+        console.error("Push admin failed:", e.message);
       }
-
     } catch (err) {
       console.error("Notification system error:", err.message);
     }
@@ -682,22 +695,16 @@ meetingRoomController.verifyBooking = async (req, res) => {
         ? "Booking confirmed successfully"
         : "Booking rejected successfully";
 
-    return res.success(
-      httpStatus.OK,
-      true,
-      message,
-      booking
-    ); 
-
-  } catch (error) { 
-    console.error("Error verifying booking:", error); 
+    return res.success(httpStatus.OK, true, message, booking);
+  } catch (error) {
+    console.error("Error verifying booking:", error);
     return res.error(
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
       "Internal server error",
-      error
-    ); 
-  } 
+      error,
+    );
+  }
 };
 
 // Whole-day availability by month (free vs booked days)
@@ -709,7 +716,7 @@ meetingRoomController.getAvailableDays = async (req, res) => {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
-        "capacityType, year and month are required"
+        "capacityType, year and month are required",
       );
     }
 
@@ -733,18 +740,18 @@ meetingRoomController.getAvailableDays = async (req, res) => {
 
     // Block days if there is any booking in 'pending' or 'confirmed' status
     // (both Hourly and Whole Day bookings block full-day bookings)
-    const bookedStatuses = ['pending', 'confirmed'];
+    const bookedStatuses = ["pending", "confirmed"];
 
     const bookings = await RoomBooking.findAll({
       where: {
         meetingRoomId: room.id,
         bookingDate: { [Op.between]: [startStr, endStr] },
-        status: { [Op.in]: bookedStatuses }
+        status: { [Op.in]: bookedStatuses },
       },
-      attributes: ['bookingDate', 'bookingType', 'timeSlots']
+      attributes: ["bookingDate", "bookingType", "timeSlots"],
     });
 
-    const bookedDateSet = new Set(bookings.map(b => b.bookingDate));
+    const bookedDateSet = new Set(bookings.map((b) => b.bookingDate));
 
     const freeDates = [];
     const bookedDates = [];
@@ -769,12 +776,17 @@ meetingRoomController.getAvailableDays = async (req, res) => {
         year: y,
         month: m,
         freeDates,
-        bookedDates
-      }
+        bookedDates,
+      },
     );
   } catch (error) {
     console.error("Error fetching available days:", error);
-    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Internal server error", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error,
+    );
   }
 };
 
