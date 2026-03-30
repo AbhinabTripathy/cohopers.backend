@@ -7,18 +7,20 @@ module.exports = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Access denied. No token provided."
+        message: "Access denied. No token provided.",
       });
     }
 
     const token = authHeader.split(" ")[1];
-    const SECRET = (process.env.APP_SUPER_SECRET_KEY || '').trim();
+    const SECRET = (process.env.APP_SUPER_SECRET_KEY || "").trim();
     const decoded = jwt.verify(token, SECRET);
 
     // attach full user to request
     const user = await User.findByPk(decoded.id);
     if (!user) {
-      return res.status(401).json({ success: false, message: "User not found" });
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found" });
     }
 
     req.user = user;
@@ -27,7 +29,7 @@ module.exports = async (req, res, next) => {
     return res.status(401).json({
       success: false,
       message: "Invalid token",
-      error: error.message
+      error: error.message,
     });
   }
 };

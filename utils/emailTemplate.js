@@ -4,7 +4,7 @@ exports.emailTemplate = ({
   amount,
   date,
   bookingType,
-  status
+  status,
 }) => {
   return `
     <h2>Booking Update - CoHopers</h2>
@@ -19,7 +19,7 @@ exports.emailTemplate = ({
     <br/>
 
     <p>For any assistance:</p>
-    <p><b>📞 9778708100 / 8328830398</b></p>
-    <p><b>📧 info@cohopers.in</b></p>
+    <p><b> 9778708100 / 8328830398</b></p>
+    <p><b> info@cohopers.in</b></p>
   `;
 };

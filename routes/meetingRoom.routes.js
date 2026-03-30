@@ -17,11 +17,11 @@ router.post(
   "/book",
   authMiddleware,
   fileUpload("meeting-rooms").fields([
-    { name: 'paymentScreenshot', maxCount: 1 },
-    { name: 'idProof', maxCount: 1 },
-    { name: 'coi', maxCount: 1 }
+    { name: "paymentScreenshot", maxCount: 1 },
+    { name: "idProof", maxCount: 1 },
+    { name: "coi", maxCount: 1 },
   ]),
-  meetingRoomController.bookRoom
+  meetingRoomController.bookRoom,
 );
 // verify booking
 router.put("/verify-booking/:bookingId", meetingRoomController.verifyBooking);

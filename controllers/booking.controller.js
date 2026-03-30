@@ -1,12 +1,13 @@
-const { Booking, User, Space ,Kyc } = require('../models');
-const { sendMail, sendPushToTopic, sendPushToUserTopic } = require('../utils/helper');
+const { Booking, User, Space, Kyc } = require("../models");
+const {
+  sendMail,
+  sendPushToTopic,
+  sendPushToUserTopic,
+} = require("../utils/helper");
 
+const bookingController = {};
 
-
-
-const bookingController = {} ;
-
-//create booking 
+//create booking
 bookingController.createBooking = async (req, res) => {
   try {
     const { spaceId, date, startDate, endDate, amount } = req.body;
@@ -19,7 +20,7 @@ bookingController.createBooking = async (req, res) => {
       endDate,
       amount,
       originalAmount: amount,
-      status: "Pending"
+      status: "Pending",
     });
 
     // Email to admin
@@ -43,38 +44,37 @@ bookingController.createBooking = async (req, res) => {
     try {
       await sendPushToUserTopic(req.user.id, {
         notification: {
-          title: 'Booking Created',
-          body: `Booking #${booking.id} created`
+          title: "Booking Created",
+          body: `Booking #${booking.id} created`,
         },
         data: {
-          type: 'booking_created',
-          entity: 'booking',
-          entityId: String(booking.id)
-        }
+          type: "booking_created",
+          entity: "booking",
+          entityId: String(booking.id),
+        },
       });
 
-      await sendPushToTopic('booking_updates', {
+      await sendPushToTopic("booking_updates", {
         notification: {
-          title: 'New Booking',
-          body: `Booking #${booking.id} created`
+          title: "New Booking",
+          body: `Booking #${booking.id} created`,
         },
         data: {
-          type: 'booking_created',
-          entity: 'booking',
-          entityId: String(booking.id)
-        }
+          type: "booking_created",
+          entity: "booking",
+          entityId: String(booking.id),
+        },
       });
 
       console.log(`Push sent for booking #${booking.id}`);
     } catch (e) {
-      console.error('Booking push failed:', e.message);
+      console.error("Booking push failed:", e.message);
     }
 
     res.status(201).json({
       message: "Booking created successfully",
-      booking
+      booking,
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -86,31 +86,54 @@ bookingController.uploadPayment = async (req, res) => {
     const booking = await Booking.findByPk(req.params.id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-  // Save screenshot path (use web-accessible uploads path for consistency)
-  booking.paymentScreenshot = `/uploads/payment-screenshots/${req.file.filename}`;
-  // Do NOT auto-confirm the booking here. Keep status as 'Pending' so admin can verify and confirm.
-  await booking.save();
+    // Save screenshot path (use web-accessible uploads path for consistency)
+    booking.paymentScreenshot = `/uploads/payment-screenshots/${req.file.filename}`;
+    // Do NOT auto-confirm the booking here. Keep status as 'Pending' so admin can verify and confirm.
+    await booking.save();
 
     // Send email to admin
-    await sendMail("info@cohopers.in", "New Booking Payment Received",
-      `A user has uploaded payment screenshot for booking ID: ${booking.id}`);
+    await sendMail(
+      "info@cohopers.in",
+      "New Booking Payment Received",
+      `A user has uploaded payment screenshot for booking ID: ${booking.id}`,
+    );
     try {
-      await sendPushToTopic('admins', {
-        notification: { title: 'Payment Uploaded', body: `Booking #${booking.id}` },
-        data: { type: 'booking_payment', entity: 'booking', entityId: String(booking.id) }
+      await sendPushToTopic("admins", {
+        notification: {
+          title: "Payment Uploaded",
+          body: `Booking #${booking.id}`,
+        },
+        data: {
+          type: "booking_payment",
+          entity: "booking",
+          entityId: String(booking.id),
+        },
       });
     } catch (e) {}
 
-  res.json({ message: "Payment uploaded successfully and is pending admin verification", booking });
+    res.json({
+      message:
+        "Payment uploaded successfully and is pending admin verification",
+      booking,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-//kyc submit for specific 
+//kyc submit for specific
 bookingController.submitKyc = async (req, res) => {
   try {
-    const { type, name, email, mobile, companyName, gstNumber, directorName, din } = req.body;
+    const {
+      type,
+      name,
+      email,
+      mobile,
+      companyName,
+      gstNumber,
+      directorName,
+      din,
+    } = req.body;
     const bookingId = req.params.id;
 
     // Use authenticated user as KYC owner
@@ -131,7 +154,8 @@ bookingController.submitKyc = async (req, res) => {
     // If a bookingId is provided, ensure the booking exists and associate it
     if (bookingId) {
       const bookingExists = await Booking.findByPk(bookingId);
-      if (!bookingExists) return res.status(404).json({ message: "Booking not found" });
+      if (!bookingExists)
+        return res.status(404).json({ message: "Booking not found" });
       kycData.bookingId = bookingId;
     }
 
@@ -144,15 +168,24 @@ bookingController.submitKyc = async (req, res) => {
       if (req.files["photo"]) kycData.photo = req.files["photo"][0].path;
 
       // Company
-      if (req.files["certificateOfIncorporation"]) kycData.certificateOfIncorporation = req.files["certificateOfIncorporation"][0].path;
-      if (req.files["companyPAN"]) kycData.companyPAN = req.files["companyPAN"][0].path;
+      if (req.files["certificateOfIncorporation"])
+        kycData.certificateOfIncorporation =
+          req.files["certificateOfIncorporation"][0].path;
+      if (req.files["companyPAN"])
+        kycData.companyPAN = req.files["companyPAN"][0].path;
 
       // Director
-      if (req.files["directorPAN"]) kycData.directorPAN = req.files["directorPAN"][0].path;
-      if (req.files["directorPhoto"]) kycData.directorPhoto = req.files["directorPhoto"][0].path;
-      if (req.files["directorIdFront"]) kycData.directorIdFront = req.files["directorIdFront"][0].path;
-      if (req.files["directorIdBack"]) kycData.directorIdBack = req.files["directorIdBack"][0].path;
-      if (req.files["directorPaymentProof"]) kycData.directorPaymentProof = req.files["directorPaymentProof"][0].path;
+      if (req.files["directorPAN"])
+        kycData.directorPAN = req.files["directorPAN"][0].path;
+      if (req.files["directorPhoto"])
+        kycData.directorPhoto = req.files["directorPhoto"][0].path;
+      if (req.files["directorIdFront"])
+        kycData.directorIdFront = req.files["directorIdFront"][0].path;
+      if (req.files["directorIdBack"])
+        kycData.directorIdBack = req.files["directorIdBack"][0].path;
+      if (req.files["directorPaymentProof"])
+        kycData.directorPaymentProof =
+          req.files["directorPaymentProof"][0].path;
     }
 
     const kyc = await Kyc.create(kycData);
@@ -161,7 +194,7 @@ bookingController.submitKyc = async (req, res) => {
     await sendMail(
       "info@cohopers.in",
       "New KYC Submission",
-      `A user has submitted ${type} KYC for user ID: ${userId}`
+      `A user has submitted ${type} KYC for user ID: ${userId}`,
     );
 
     res.json({ message: "KYC submitted successfully", kyc });
@@ -175,10 +208,10 @@ bookingController.getBookingDetails = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id, {
       include: [
-  { model: Space, as: "space" },
-  { model: User, as: "user" },
-  { model: Kyc, as: "kyc" }  
-]
+        { model: Space, as: "space" },
+        { model: User, as: "user" },
+        { model: Kyc, as: "kyc" },
+      ],
     });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
     res.json({ booking });

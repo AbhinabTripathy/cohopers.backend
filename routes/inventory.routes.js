@@ -1,23 +1,54 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const inventoryController = require('../controllers/inventory.controller');
-const authMiddleware = require('../middlewares/authAdminMiddleware');
-const uploadPhoto = require("../middlewares/upload.middleware")
-const authUserMiddleware = require("../middlewares/authUserMiddleware")
+const inventoryController = require("../controllers/inventory.controller");
+const authMiddleware = require("../middlewares/authAdminMiddleware");
+const uploadPhoto = require("../middlewares/upload.middleware");
+const authUserMiddleware = require("../middlewares/authUserMiddleware");
 //public routes
-router.get('/spaces', inventoryController.getAllSpaces);
-router.get('/spaces/:id', inventoryController.getSpaceById);
-// procted route only for ADMIN 
-router.post('/spaces', authMiddleware,uploadPhoto('spaces').array('spaceImages', 5), inventoryController.addSpace);
-router.put('/spaces/:id', authMiddleware,inventoryController.uploadSpaceImages, inventoryController.updateSpace);
-router.delete('/spaces/:id', authMiddleware,inventoryController.deleteSpace);
+router.get("/spaces", inventoryController.getAllSpaces);
+router.get("/spaces/:id", inventoryController.getSpaceById);
+// procted route only for ADMIN
+router.post(
+  "/spaces",
+  authMiddleware,
+  uploadPhoto("spaces").array("spaceImages", 5),
+  inventoryController.addSpace,
+);
+router.put(
+  "/spaces/:id",
+  authMiddleware,
+  inventoryController.uploadSpaceImages,
+  inventoryController.updateSpace,
+);
+router.delete("/spaces/:id", authMiddleware, inventoryController.deleteSpace);
 //add team member for booking space
-router.post("/team-members/add",authUserMiddleware,uploadPhoto('team-members').single('photo'),inventoryController.addTeamMember);
-router.get("/team-members/booking/:bookingId", authUserMiddleware, inventoryController.getTeamMembers);
-router.put("/team-members/:id", authUserMiddleware, inventoryController.updateTeamMember);
-router.delete("/team-members/:id", authUserMiddleware, inventoryController.deleteTeamMember);
+router.post(
+  "/team-members/add",
+  authUserMiddleware,
+  uploadPhoto("team-members").single("photo"),
+  inventoryController.addTeamMember,
+);
+router.get(
+  "/team-members/booking/:bookingId",
+  authUserMiddleware,
+  inventoryController.getTeamMembers,
+);
+router.put(
+  "/team-members/:id",
+  authUserMiddleware,
+  inventoryController.updateTeamMember,
+);
+router.delete(
+  "/team-members/:id",
+  authUserMiddleware,
+  inventoryController.deleteTeamMember,
+);
 
 // Admin routes - require admin authentication
-router.get("/team-members/all", authMiddleware, inventoryController.getAllTeamMembers);
+router.get(
+  "/team-members/all",
+  authMiddleware,
+  inventoryController.getAllTeamMembers,
+);
 
 module.exports = router;

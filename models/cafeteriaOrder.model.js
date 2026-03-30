@@ -86,7 +86,7 @@ const CafeteriaOrder = sequelize.define(
   {
     tableName: "cafeteria_orders",
     timestamps: true,
-  }
+  },
 );
 
 module.exports = CafeteriaOrder;

@@ -1,41 +1,56 @@
-const { Space, AvailableDate, Booking, teamMember,  } = require('../models');
-const upload = require('../middlewares/upload.middleware');
-const path = require('path');
-const fs = require('fs');
+const { Space, AvailableDate, Booking, teamMember } = require("../models");
+const upload = require("../middlewares/upload.middleware");
+const path = require("path");
+const fs = require("fs");
 
 const inventoryController = {};
 
 // Middleware for handling space image uploads
-inventoryController.uploadSpaceImages = upload('spaces').array('spaceImages', 5);
+inventoryController.uploadSpaceImages = upload("spaces").array(
+  "spaceImages",
+  5,
+);
 
 // Add new space
 inventoryController.addSpace = async (req, res, next) => {
   try {
-    const { spaceName, seater, price, availability, availableDates,cabinNumber,roomNumber } = req.body;
+    const {
+      spaceName,
+      seater,
+      price,
+      availability,
+      availableDates,
+      cabinNumber,
+      roomNumber,
+    } = req.body;
 
     if (!spaceName || !price) {
       return res.status(400).json({
         success: false,
-        message: 'Space name and price are required'
+        message: "Space name and price are required",
       });
     }
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'At least one space image is required'
+        message: "At least one space image is required",
       });
     }
 
-    const imagePaths = req.files.map(file => `/uploads/spaces/${file.filename}`);
+    const imagePaths = req.files.map(
+      (file) => `/uploads/spaces/${file.filename}`,
+    );
 
     // Price with GST
     const gstRate = 0.18;
-    const finalPrice = parseFloat(price) + (parseFloat(price) * gstRate);
+    const finalPrice = parseFloat(price) + parseFloat(price) * gstRate;
 
     // Validate availability
     const validStatuses = ["Available", "Available Soon", "Not Available"];
-    const finalAvailability = validStatuses.includes(availability) ? availability : "Available";
+    const finalAvailability = validStatuses.includes(availability)
+      ? availability
+      : "Available";
 
     // Create Space
     const newSpace = await Space.create({
@@ -44,10 +59,10 @@ inventoryController.addSpace = async (req, res, next) => {
       spaceName,
       seater: seater ? parseInt(seater) : null,
       price: parseFloat(price),
-      gst: 18.00,
+      gst: 18.0,
       finalPrice: finalPrice.toFixed(2),
       availability: finalAvailability,
-      images: imagePaths
+      images: imagePaths,
     });
 
     // Handle available dates
@@ -60,15 +75,26 @@ inventoryController.addSpace = async (req, res, next) => {
             parsedDates = JSON.parse(s);
           } catch {
             parsedDates = s
-              .replace(/^\[/, '').replace(/\]$/, '')
-              .split(',')
-              .map(d => d.trim().replace(/^"+|"+$/g, '').replace(/^'+|'+$/g, ''))
+              .replace(/^\[/, "")
+              .replace(/\]$/, "")
+              .split(",")
+              .map((d) =>
+                d
+                  .trim()
+                  .replace(/^"+|"+$/g, "")
+                  .replace(/^'+|'+$/g, ""),
+              )
               .filter(Boolean);
           }
         } else {
           parsedDates = s
-            .split(',')
-            .map(d => d.trim().replace(/^"+|"+$/g, '').replace(/^'+|'+$/g, ''))
+            .split(",")
+            .map((d) =>
+              d
+                .trim()
+                .replace(/^"+|"+$/g, "")
+                .replace(/^'+|'+$/g, ""),
+            )
             .filter(Boolean);
         }
       } else if (Array.isArray(availableDates)) {
@@ -82,12 +108,11 @@ inventoryController.addSpace = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Space added successfully with GST and available dates',
+      message: "Space added successfully with GST and available dates",
       data: await Space.findByPk(newSpace.id, {
-        include: [{ model: AvailableDate, as: "availableDates" }]
-      })
+        include: [{ model: AvailableDate, as: "availableDates" }],
+      }),
     });
-
   } catch (error) {
     console.error(error);
     next(error);
@@ -98,23 +123,31 @@ inventoryController.addSpace = async (req, res, next) => {
 inventoryController.getAllSpaces = async (req, res, next) => {
   try {
     const spaces = await Space.findAll({
-      include: [{ model: AvailableDate, as: 'availableDates', required: false }],
-      order: [['createdAt', 'DESC']]
+      include: [
+        { model: AvailableDate, as: "availableDates", required: false },
+      ],
+      order: [["createdAt", "DESC"]],
     });
 
-    const items = spaces.map(sp => {
+    const items = spaces.map((sp) => {
       const s = sp.toJSON();
-      const imagesStr = typeof s.images === 'string' ? s.images : JSON.stringify(s.images || []);
+      const imagesStr =
+        typeof s.images === "string"
+          ? s.images
+          : JSON.stringify(s.images || []);
       const availableDates = Array.isArray(s.availableDates)
-        ? s.availableDates.map(d => {
-            const dj = typeof d.toJSON === 'function' ? d.toJSON() : d;
-            const dateStr = typeof dj.date === 'string' ? dj.date : JSON.stringify(dj.date || []);
+        ? s.availableDates.map((d) => {
+            const dj = typeof d.toJSON === "function" ? d.toJSON() : d;
+            const dateStr =
+              typeof dj.date === "string"
+                ? dj.date
+                : JSON.stringify(dj.date || []);
             return {
               id: dj.id,
               date: dateStr,
               spaceId: dj.spaceId,
               createdAt: dj.createdAt,
-              updatedAt: dj.updatedAt
+              updatedAt: dj.updatedAt,
             };
           })
         : [];
@@ -132,37 +165,40 @@ inventoryController.getAllSpaces = async (req, res, next) => {
         images: imagesStr,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
-        availableDates
+        availableDates,
       };
     });
 
-    return res.status(200).json({ success: true, message: 'Spaces retrieved successfully', data: items });
+    return res.status(200).json({
+      success: true,
+      message: "Spaces retrieved successfully",
+      data: items,
+    });
   } catch (error) {
     next(error);
   }
 };
 
-
 // Get space by ID
 inventoryController.getSpaceById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const space = await Space.findByPk(id, {
-      include: [{ model: AvailableDate ,as:"availableDates"}]
+      include: [{ model: AvailableDate, as: "availableDates" }],
     });
-    
+
     if (!space) {
       return res.status(404).json({
         success: false,
-        message: 'Space not found'
+        message: "Space not found",
       });
     }
-    
+
     res.status(200).json({
       success: true,
-      message: 'Space retrieved successfully',
-      data: space
+      message: "Space retrieved successfully",
+      data: space,
     });
   } catch (error) {
     next(error);
@@ -173,66 +209,69 @@ inventoryController.getSpaceById = async (req, res, next) => {
 inventoryController.updateSpace = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { roomNumber, cabinNumber, price, availability, availableDates } = req.body;
-    
+    const { roomNumber, cabinNumber, price, availability, availableDates } =
+      req.body;
+
     // Check if space exists
     const space = await Space.findByPk(id);
     if (!space) {
       return res.status(404).json({
         success: false,
-        message: 'Space not found'
+        message: "Space not found",
       });
     }
-    
+
     // Update space details
     const updateData = {};
     if (roomNumber) updateData.roomNumber = roomNumber;
     if (cabinNumber) updateData.cabinNumber = cabinNumber;
     if (price) updateData.price = price;
     if (availability) updateData.availability = availability;
-    
+
     // Process new images if uploaded
     if (req.files && req.files.length > 0) {
       // Delete old images from storage
       const oldImages = space.images;
-      oldImages.forEach(imagePath => {
-        const fullPath = path.join(__dirname, '..', imagePath);
+      oldImages.forEach((imagePath) => {
+        const fullPath = path.join(__dirname, "..", imagePath);
         if (fs.existsSync(fullPath)) {
           fs.unlinkSync(fullPath);
         }
       });
-      
+
       // Add new image paths
-      updateData.images = req.files.map(file => `/uploads/spaces/${file.filename}`);
+      updateData.images = req.files.map(
+        (file) => `/uploads/spaces/${file.filename}`,
+      );
     }
-    
+
     // Update space record
     await space.update(updateData);
-    
+
     // Update available dates if provided
     if (availableDates && Array.isArray(JSON.parse(availableDates))) {
       // Delete existing dates
       await AvailableDate.destroy({ where: { spaceId: id } });
-      
+
       // Add new dates
       const dates = JSON.parse(availableDates);
-      const availableDateRecords = dates.map(date => ({
+      const availableDateRecords = dates.map((date) => ({
         date: new Date(date),
-        spaceId: id
+        spaceId: id,
       }));
-      
+
       await AvailableDate.bulkCreate(availableDateRecords);
     }
-    
+
     // Fetch updated space with available dates
     const updatedSpace = await Space.findByPk(id, {
-      include: [{ model: AvailableDate ,as:"availableDates" }]
+      include: [{ model: AvailableDate, as: "availableDates" }],
     });
-    
+
     res.status(200).json({
       success: true,
-      message: 'Space updated successfully',
-      data: updatedSpace
+      message: "Space updated successfully",
+      data: updatedSpace,
     });
   } catch (error) {
     next(error);
@@ -243,34 +282,34 @@ inventoryController.updateSpace = async (req, res, next) => {
 inventoryController.deleteSpace = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Check if space exists
     const space = await Space.findByPk(id);
     if (!space) {
       return res.status(404).json({
         success: false,
-        message: 'Space not found'
+        message: "Space not found",
       });
     }
-    
+
     // Delete images from storage
     const images = space.images;
-    images.forEach(imagePath => {
-      const fullPath = path.join(__dirname, '..', imagePath);
+    images.forEach((imagePath) => {
+      const fullPath = path.join(__dirname, "..", imagePath);
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
       }
     });
-    
+
     // Delete available dates
     await AvailableDate.destroy({ where: { spaceId: id } });
-    
+
     // Delete space
     await space.destroy();
-    
+
     res.status(200).json({
       success: true,
-      message: 'Space deleted successfully'
+      message: "Space deleted successfully",
     });
   } catch (error) {
     next(error);
@@ -286,7 +325,7 @@ inventoryController.addTeamMember = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({
         success: false,
-        message: "Authentication failed - user not found in request"
+        message: "Authentication failed - user not found in request",
       });
     }
 
@@ -295,13 +334,13 @@ inventoryController.addTeamMember = async (req, res) => {
 
     // Find user's active confirmed booking
     const booking = await Booking.findOne({
-      where: { userId, status: "Confirm" }
+      where: { userId, status: "Confirm" },
     });
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "No active confirmed booking found for this user"
+        message: "No active confirmed booking found for this user",
       });
     }
 
@@ -341,28 +380,28 @@ inventoryController.addTeamMember = async (req, res) => {
 inventoryController.getTeamMembers = async (req, res, next) => {
   try {
     const { bookingId } = req.params;
-    
+
     // Check if booking exists and belongs to the user
     const booking = await Booking.findOne({
-      where: { id: bookingId, userId: req.user.id }
+      where: { id: bookingId, userId: req.user.id },
     });
-    
+
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found or you don\'t have permission'
+        message: "Booking not found or you don't have permission",
       });
     }
-    
+
     // Get team members
     const teamMembers = await teamMember.findAll({
-      where: { bookingId }
+      where: { bookingId },
     });
-    
+
     return res.status(200).json({
       success: true,
-      message: 'Team members retrieved successfully',
-      data: teamMembers
+      message: "Team members retrieved successfully",
+      data: teamMembers,
     });
   } catch (error) {
     console.error("Error getting team members:", error);
@@ -375,36 +414,38 @@ inventoryController.updateTeamMember = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { fullName, email, phoneNumber, role, deskNumber } = req.body;
-    
+
     // Find team member and check if it belongs to user's booking
     const TeamMember = await teamMember.findOne({
       where: { id },
-      include: [{
-        model: Booking,
-        where: { userId: req.user.id }
-      }]
+      include: [
+        {
+          model: Booking,
+          where: { userId: req.user.id },
+        },
+      ],
     });
-    
+
     if (!TeamMember) {
       return res.status(404).json({
         success: false,
-        message: 'Team member not found or you don\'t have permission'
+        message: "Team member not found or you don't have permission",
       });
     }
-    
+
     // Update team member
     await TeamMember.update({
       fullName,
       email,
       phoneNumber,
       role,
-      deskNumber
+      deskNumber,
     });
-    
+
     return res.status(200).json({
       success: true,
-      message: 'Team member updated successfully',
-      data: TeamMember
+      message: "Team member updated successfully",
+      data: TeamMember,
     });
   } catch (error) {
     console.error("Error updating team member:", error);
@@ -416,29 +457,31 @@ inventoryController.updateTeamMember = async (req, res, next) => {
 inventoryController.deleteTeamMember = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Find team member and check if it belongs to user's booking
     const TeamMember = await teamMember.findOne({
       where: { id },
-      include: [{
-        model: Booking,
-        where: { userId: req.user.id }
-      }]
+      include: [
+        {
+          model: Booking,
+          where: { userId: req.user.id },
+        },
+      ],
     });
-    
+
     if (!TeamMember) {
       return res.status(404).json({
         success: false,
-        message: 'Team member not found or you don\'t have permission'
+        message: "Team member not found or you don't have permission",
       });
     }
-    
+
     // delete team members
     await TeamMember.destroy();
-    
+
     return res.status(200).json({
       success: true,
-      message: 'Team member deleted successfully'
+      message: "Team member deleted successfully",
     });
   } catch (error) {
     console.error("Error deleting team member:", error);
@@ -450,26 +493,29 @@ inventoryController.deleteTeamMember = async (req, res, next) => {
 inventoryController.getAllTeamMembers = async (req, res, next) => {
   try {
     const teamMembers = await teamMember.findAll({
-     
-      include: [{
-        model: Booking,
-        include: [{
-          model: Space, as:"space",
-          attributes: ['roomNumber', 'cabinNumber', 'spaceName']
-        }]
-      }]
+      include: [
+        {
+          model: Booking,
+          include: [
+            {
+              model: Space,
+              as: "space",
+              attributes: ["roomNumber", "cabinNumber", "spaceName"],
+            },
+          ],
+        },
+      ],
     });
-    
+
     return res.status(200).json({
       success: true,
-      message: 'All team members retrieved successfully',
-      data: teamMembers
+      message: "All team members retrieved successfully",
+      data: teamMembers,
     });
   } catch (error) {
     console.error("Error getting all team members:", error);
     next(error);
   }
 };
-
 
 module.exports = inventoryController;

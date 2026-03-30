@@ -1,8 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const bookingController = require('../controllers/booking.controller');
-const upload = require('../middlewares/upload.middleware');
-const authUserMiddleware = require('../middlewares/authUserMiddleware');
+const bookingController = require("../controllers/booking.controller");
+const upload = require("../middlewares/upload.middleware");
+const authUserMiddleware = require("../middlewares/authUserMiddleware");
 
 router.use(authUserMiddleware);
 
@@ -10,7 +10,11 @@ router.use(authUserMiddleware);
 router.post("/book/space", bookingController.createBooking);
 
 // Upload payment screenshot
-router.post("/:id/payment", upload("payment-screenshots").single("paymentScreenshot"), bookingController.uploadPayment);
+router.post(
+  "/:id/payment",
+  upload("payment-screenshots").single("paymentScreenshot"),
+  bookingController.uploadPayment,
+);
 //kyc upload
 router.post(
   "/kyc",
@@ -29,7 +33,7 @@ router.post(
     { name: "directorIdBack", maxCount: 1 },
     { name: "directorPaymentProof", maxCount: 1 },
   ]),
-  bookingController.submitKyc
+  bookingController.submitKyc,
 );
 
 //  Get booking details with KYC

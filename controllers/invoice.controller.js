@@ -1,21 +1,21 @@
-const { ZohoBooksService } = require('../config/zoho.config');
+const { ZohoBooksService } = require("../config/zoho.config");
 const zohoService = new ZohoBooksService();
 
 // Get all invoices
 exports.getAllInvoices = async (req, res) => {
   try {
     const invoices = await zohoService.getInvoices(req.query);
-    res.success(invoices, 'Invoices retrieved successfully');
+    res.success(invoices, "Invoices retrieved successfully");
   } catch (error) {
-    res.error(error, 'Failed to retrieve invoices');
+    res.error(error, "Failed to retrieve invoices");
   }
 };
 
 // Get pending invoices
 exports.getPendingInvoices = async (req, res) => {
   try {
-    const invoices = await zohoService.getInvoices({ status: 'sent' }); // Fetch unpaid invoices
-    const pendingInvoices = invoices.invoices.map(invoice => ({
+    const invoices = await zohoService.getInvoices({ status: "sent" }); // Fetch unpaid invoices
+    const pendingInvoices = invoices.invoices.map((invoice) => ({
       customer_name: invoice.customer_name,
       invoice_number: invoice.invoice_number,
       date: invoice.date,
@@ -23,9 +23,9 @@ exports.getPendingInvoices = async (req, res) => {
       total: invoice.total,
       balance: invoice.balance,
     }));
-    res.success(pendingInvoices, 'Pending invoices retrieved successfully');
+    res.success(pendingInvoices, "Pending invoices retrieved successfully");
   } catch (error) {
-    res.error(error, 'Failed to retrieve pending invoices');
+    res.error(error, "Failed to retrieve pending invoices");
   }
 };
 
@@ -33,9 +33,9 @@ exports.getPendingInvoices = async (req, res) => {
 exports.getInvoiceById = async (req, res) => {
   try {
     const invoice = await zohoService.getInvoiceById(req.params.id);
-    res.success(invoice, 'Invoice retrieved successfully');
+    res.success(invoice, "Invoice retrieved successfully");
   } catch (error) {
-    res.error(error, 'Failed to retrieve invoice');
+    res.error(error, "Failed to retrieve invoice");
   }
 };
 
@@ -43,11 +43,11 @@ exports.getInvoiceById = async (req, res) => {
 exports.sendInvoiceEmail = async (req, res) => {
   try {
     const { id } = req.params;
-    const emailData = req.body; 
+    const emailData = req.body;
     const result = await zohoService.sendInvoiceEmail(id, emailData);
-    res.success(result, 'Invoice sent successfully');
+    res.success(result, "Invoice sent successfully");
   } catch (error) {
-    res.error(error, 'Failed to send invoice');
+    res.error(error, "Failed to send invoice");
   }
 };
 
@@ -56,10 +56,13 @@ exports.downloadInvoicePDF = async (req, res) => {
   try {
     const { id } = req.params;
     const pdfBuffer = await zohoService.getInvoicePDF(id);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${id}.pdf`);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice-${id}.pdf`,
+    );
     res.send(pdfBuffer);
   } catch (error) {
-    res.error(error, 'Failed to download invoice PDF');
+    res.error(error, "Failed to download invoice PDF");
   }
 };

@@ -8,7 +8,6 @@ if (!fs.existsSync(baseUploadDir)) {
   fs.mkdirSync(baseUploadDir, { recursive: true });
 }
 
-
 const upload = (folderName = "") => {
   // Make sure folder exists
   const uploadDir = path.join(baseUploadDir, folderName);
@@ -21,7 +20,7 @@ const upload = (folderName = "") => {
     destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
       const uniqueName = `${Date.now()}-${Math.round(
-        Math.random() * 1e9
+        Math.random() * 1e9,
       )}${path.extname(file.originalname)}`;
       cb(null, uniqueName);
     },

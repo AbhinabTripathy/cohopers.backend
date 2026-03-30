@@ -17,11 +17,11 @@ console.log("  Push notifications active (Firebase Cloud Messaging)");
 async function sendMail(to, subject, html, options = {}) {
   try {
     const mailOptions = {
-       from: process.env.SMTP_USER,
-  to,
-  cc: options.cc || "info@cohopers.in", //default CC
-  subject,
-  html,
+      from: process.env.SMTP_USER,
+      to,
+      cc: options.cc || "info@cohopers.in", //default CC
+      subject,
+      html,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -32,7 +32,7 @@ async function sendMail(to, subject, html, options = {}) {
     return { success: false, error: error.message };
   }
 }
-///////// Push notification ////// 
+///////// Push notification //////
 const admin = require("firebase-admin");
 const path = require("path");
 const fs = require("fs");
@@ -45,7 +45,12 @@ function initFirebase() {
   }
 
   try {
-    const saPath = path.join(__dirname, "..", "config", "firebase-service-account.json");
+    const saPath = path.join(
+      __dirname,
+      "..",
+      "config",
+      "firebase-service-account.json",
+    );
 
     //  Service account JSON file
     if (fs.existsSync(saPath)) {
@@ -65,7 +70,9 @@ function initFirebase() {
         credential: admin.credential.applicationDefault(),
       });
 
-      console.log("Firebase initialized using GOOGLE_APPLICATION_CREDENTIALS env variable");
+      console.log(
+        "Firebase initialized using GOOGLE_APPLICATION_CREDENTIALS env variable",
+      );
     }
 
     //  Environment variables
@@ -93,18 +100,25 @@ function initFirebase() {
         if (!projectId) missing.push("FIREBASE_PROJECT_ID");
         if (!clientEmail) missing.push("FIREBASE_CLIENT_EMAIL");
         if (!privateKey) missing.push("FIREBASE_PRIVATE_KEY");
-        
-        console.error("Firebase credentials not found. Missing environment variables:", missing.join(", "));
+
+        console.error(
+          "Firebase credentials not found. Missing environment variables:",
+          missing.join(", "),
+        );
         console.error("Please configure one of:");
         console.error("  1. config/firebase-service-account.json file");
-        console.error("  2. GOOGLE_APPLICATION_CREDENTIALS environment variable");
-        console.error("  3. FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY environment variables");
+        console.error(
+          "  2. GOOGLE_APPLICATION_CREDENTIALS environment variable",
+        );
+        console.error(
+          "  3. FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY environment variables",
+        );
         throw new Error("Firebase credentials not configured");
       }
     }
   } catch (error) {
     console.error("Firebase initialization error:", error.message);
-    throw error; 
+    throw error;
   }
 
   return admin;
@@ -117,7 +131,7 @@ async function sendPushToToken(token, message) {
 
     const safeData = message.data
       ? Object.fromEntries(
-          Object.entries(message.data).map(([k, v]) => [k, String(v)])
+          Object.entries(message.data).map(([k, v]) => [k, String(v)]),
         )
       : undefined;
 
@@ -131,13 +145,13 @@ async function sendPushToToken(token, message) {
     console.log(`Push notification sent to token: ${token}`, { response });
     return response;
   } catch (error) {
-    console.error(`Push token error for ${token}:`, { 
-      message: error.message, 
+    console.error(`Push token error for ${token}:`, {
+      message: error.message,
       code: error.code,
       tokenLength: token?.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    throw error; 
+    throw error;
   }
 }
 
@@ -148,7 +162,7 @@ async function sendPushToTopic(topic, message) {
 
     const safeData = message.data
       ? Object.fromEntries(
-          Object.entries(message.data).map(([k, v]) => [k, String(v)])
+          Object.entries(message.data).map(([k, v]) => [k, String(v)]),
         )
       : undefined;
 
@@ -162,12 +176,12 @@ async function sendPushToTopic(topic, message) {
     console.log(`Push notification sent to topic: ${topic}`, { response });
     return response;
   } catch (error) {
-    console.error(`Push topic error for topic '${topic}':`, { 
-      message: error.message, 
+    console.error(`Push topic error for topic '${topic}':`, {
+      message: error.message,
       code: error.code,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    throw error; 
+    throw error;
   }
 }
 
@@ -176,7 +190,7 @@ async function sendPushToUserTopic(userId, message) {
   return sendPushToTopic(`user_${userId}`, message);
 }
 
- // Subscribe token to topic
+// Subscribe token to topic
 async function subscribeTokenToTopic(token, topic) {
   try {
     const app = initFirebase();
@@ -184,10 +198,10 @@ async function subscribeTokenToTopic(token, topic) {
     console.log(`Token subscribed to topic '${topic}'`, { response });
     return response;
   } catch (error) {
-    console.error(` Subscribe topic error for topic '${topic}':`, { 
-      message: error.message, 
+    console.error(` Subscribe topic error for topic '${topic}':`, {
+      message: error.message,
       code: error.code,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     throw error;
   }
@@ -201,10 +215,10 @@ async function unsubscribeTokenFromTopic(token, topic) {
     console.log(`Token unsubscribed from topic '${topic}'`, { response });
     return response;
   } catch (error) {
-    console.error(`Unsubscribe topic error for topic '${topic}':`, { 
-      message: error.message, 
+    console.error(`Unsubscribe topic error for topic '${topic}':`, {
+      message: error.message,
       code: error.code,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     throw error;
   }
@@ -217,5 +231,5 @@ module.exports = {
   sendPushToUserTopic,
   subscribeTokenToTopic,
   unsubscribeTokenFromTopic,
-  sendMail
+  sendMail,
 };

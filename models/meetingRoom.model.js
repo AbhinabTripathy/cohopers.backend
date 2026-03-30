@@ -53,9 +53,9 @@ const MeetingRoom = sequelize.define(
     },
   },
   {
-   tableName: "meeting_rooms", 
-   timestamps: true  
-  });
-
+    tableName: "meeting_rooms",
+    timestamps: true,
+  },
+);
 
 module.exports = MeetingRoom;

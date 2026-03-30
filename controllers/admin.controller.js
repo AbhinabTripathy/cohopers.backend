@@ -1,15 +1,28 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { User, MeetingRoom, roomBooking, Space, Booking, Kyc, FCMToken } = require('../models');
-const sequelize = require('../config/db');
-const HttpStatus = require('../enums/httpStatusCode.enum');
-const { sendMail, sendPushToTopic, sendPushToUserTopic, sendPushToToken, subscribeTokenToTopic, unsubscribeTokenFromTopic } = require("../utils/helper")
-const { getNoticeStatus } = require('../utils/noticeHelper');
-const { emailTemplate } = require('../utils/emailTemplate');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const {
+  User,
+  MeetingRoom,
+  roomBooking,
+  Space,
+  Booking,
+  Kyc,
+  FCMToken,
+} = require("../models");
+const sequelize = require("../config/db");
+const HttpStatus = require("../enums/httpStatusCode.enum");
+const {
+  sendMail,
+  sendPushToTopic,
+  sendPushToUserTopic,
+  sendPushToToken,
+  subscribeTokenToTopic,
+  unsubscribeTokenFromTopic,
+} = require("../utils/helper");
+const { getNoticeStatus } = require("../utils/noticeHelper");
+const { emailTemplate } = require("../utils/emailTemplate");
 
-
-
-const adminController = {}; 
+const adminController = {};
 
 // temporary ADMIN register (use only once)
 adminController.registerAdmin = async (req, res) => {
@@ -20,7 +33,7 @@ adminController.registerAdmin = async (req, res) => {
     if (!username || !email || !password) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
-        message: 'Username, email, and password are required',
+        message: "Username, email, and password are required",
       });
     }
 
@@ -29,7 +42,7 @@ adminController.registerAdmin = async (req, res) => {
     if (existingAdmin) {
       return res.status(HttpStatus.CONFLICT).json({
         success: false,
-        message: 'Admin with this email already exists',
+        message: "Admin with this email already exists",
       });
     }
 
@@ -42,25 +55,25 @@ adminController.registerAdmin = async (req, res) => {
       email,
       password: hashedPassword,
       mobile,
-      role: 'admin', // mark this user as admin
-      isActive: true
+      role: "admin", // mark this user as admin
+      isActive: true,
     });
 
     return res.status(HttpStatus.CREATED).json({
       success: true,
-      message: 'Admin registered successfully',
+      message: "Admin registered successfully",
       data: {
         id: admin.id,
         username: admin.username,
         email: admin.email,
-        role: admin.role
-      }
+        role: admin.role,
+      },
     });
   } catch (error) {
-    console.error('Error registering admin:', error);
+    console.error("Error registering admin:", error);
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Error registering admin',
+      message: "Error registering admin",
       error: error.message,
     });
   }
@@ -74,7 +87,7 @@ adminController.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required"
+        message: "Email and password are required",
       });
     }
 
@@ -83,7 +96,7 @@ adminController.login = async (req, res) => {
     if (!user || user.role !== "admin") {
       return res.status(401).json({
         success: false,
-        message: "Admin user not found or unauthorized"
+        message: "Admin user not found or unauthorized",
       });
     }
 
@@ -91,36 +104,39 @@ adminController.login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid password"
+        message: "Invalid password",
       });
     }
 
     // Use the same trimmed secret used across the app
-    const SECRET = (process.env.APP_SUPER_SECRET_KEY || process.env.TOKEN_SECRET || '').trim();
+    const SECRET = (
+      process.env.APP_SUPER_SECRET_KEY ||
+      process.env.TOKEN_SECRET ||
+      ""
+    ).trim();
     if (!SECRET) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: 'Server JWT secret is not configured'
+        message: "Server JWT secret is not configured",
       });
     }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: "admin" },
       SECRET,
-      { expiresIn: "7d", algorithm: 'HS256' }
+      { expiresIn: "7d", algorithm: "HS256" },
     );
 
     return res.status(200).json({
       success: true,
       message: "Admin login successful",
-      data: { token }
+      data: { token },
     });
-
   } catch (error) {
     console.error("Admin Login Error:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -132,16 +148,16 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
       include: [
         {
           model: User,
-          as: 'user',
-          attributes: ["id", "username", "email"]
+          as: "user",
+          attributes: ["id", "username", "email"],
         },
         {
           model: MeetingRoom,
-          as:'meetingRoom',
-          attributes: ["id", "name", "capacityType"]
-        }
+          as: "meetingRoom",
+          attributes: ["id", "name", "capacityType"],
+        },
       ],
-      order: [["createdAt", "DESC"]]
+      order: [["createdAt", "DESC"]],
     });
 
     // Format for admin panel
@@ -160,20 +176,20 @@ adminController.getAllMeetingRoomBookings = async (req, res) => {
             : "Full Day",
         paymentEmail: booking.user?.email || null,
         status: booking.status,
-        id: booking.id
+        id: booking.id,
       };
     });
 
     return res.status(200).json({
       success: true,
       message: "Booked Meeting room retrieved successfully",
-      data: formattedBookings
+      data: formattedBookings,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve meeting room bookings",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -191,15 +207,21 @@ adminController.getAllSpaceBookings = async (req, res) => {
         {
           model: Space,
           as: "space",
-          attributes: ["id", "spaceName", "roomNumber", "cabinNumber", "seater"]
+          attributes: [
+            "id",
+            "spaceName",
+            "roomNumber",
+            "cabinNumber",
+            "seater",
+          ],
         },
         {
           model: Kyc,
           as: "kyc",
-          attributes: { exclude: ["createdAt", "updatedAt"] }
-        }
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+        },
       ],
-      order: [["createdAt", "DESC"]]
+      order: [["createdAt", "DESC"]],
     });
 
     const formattedBookings = bookings.map((booking, index) => ({
@@ -220,19 +242,19 @@ adminController.getAllSpaceBookings = async (req, res) => {
       originalAmount: booking.originalAmount,
       negotiatedAmount: booking.negotiatedAmount,
       status: booking.status,
-      paymentScreenshot: booking.paymentScreenshot
+      paymentScreenshot: booking.paymentScreenshot,
     }));
 
     res.status(200).json({
       success: true,
       message: "Space bookings retrieved successfully",
-      data: formattedBookings
+      data: formattedBookings,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to retrieve space bookings",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -246,14 +268,14 @@ adminController.verifySpaceBooking = async (req, res) => {
     if (!id) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
-        message: "Booking ID is required"
+        message: "Booking ID is required",
       });
     }
 
     if (!status || !["Confirm", "Reject"].includes(status)) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         success: false,
-        message: "Valid status (Confirm/Reject) is required"
+        message: "Valid status (Confirm/Reject) is required",
       });
     }
 
@@ -261,26 +283,26 @@ adminController.verifySpaceBooking = async (req, res) => {
       include: [
         {
           model: User,
-          as:"user",
-          attributes: ["id", "userName", "email"]
+          as: "user",
+          attributes: ["id", "userName", "email"],
         },
         {
           model: Space,
-          as:"space",
-          attributes: ["id", "spaceName", "roomNumber", "cabinNumber"]
+          as: "space",
+          attributes: ["id", "spaceName", "roomNumber", "cabinNumber"],
         },
         {
-          model:Kyc,  
+          model: Kyc,
           as: "kyc",
-          attributes: { exclude: ["createdAt", "updatedAt"] }
-        }
-      ]
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+        },
+      ],
     });
 
     if (!booking) {
       return res.status(HttpStatus.NOT_FOUND).json({
         success: false,
-        message: "Booking not found"
+        message: "Booking not found",
       });
     }
 
@@ -289,7 +311,7 @@ adminController.verifySpaceBooking = async (req, res) => {
       if (!Number.isFinite(amt) || amt <= 0) {
         return res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
-          message: "finalAmount must be a positive number"
+          message: "finalAmount must be a positive number",
         });
       }
       booking.negotiatedAmount = amt;
@@ -300,61 +322,72 @@ adminController.verifySpaceBooking = async (req, res) => {
     await booking.save();
     try {
       const pushId = await sendPushToUserTopic(booking.userId, {
-        notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
-        data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
+        notification: {
+          title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
+          body: `Booking #${booking.id}`,
+        },
+        data: {
+          type: "booking_status",
+          entity: "booking",
+          entityId: String(booking.id),
+          status: status,
+        },
       });
       console.log(` Push sent to topic user_${booking.userId}: ${pushId}`);
-      
+
       // Also broadcast to booking updates topic
-      await sendPushToTopic('booking_updates', {
-        notification: { title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`, body: `Booking #${booking.id}` },
-        data: { type: 'booking_status', entity: 'booking', entityId: String(booking.id), status: status }
+      await sendPushToTopic("booking_updates", {
+        notification: {
+          title: `Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
+          body: `Booking #${booking.id}`,
+        },
+        data: {
+          type: "booking_status",
+          entity: "booking",
+          entityId: String(booking.id),
+          status: status,
+        },
       });
       console.log(`Push sent to topic booking_updates: ${pushId}`);
     } catch (e) {
-      console.error('Push send failed:', e);
+      console.error("Push send failed:", e);
     }
 
     // Send email notification to user
     try {
+      const emailData = {
+        clientName: booking.user.userName,
+        companyName: booking.kyc?.companyName || "N/A",
+        amount: booking.amount,
+        date: booking.date,
+        bookingType: "Space Booking",
+        status: status === "Confirm" ? "Confirmed" : "Rejected",
+      };
 
-  const emailData = {
-    clientName: booking.user.userName,
-    companyName: booking.kyc?.companyName || "N/A",
-    amount: booking.amount,
-    date: booking.date,
-    bookingType: "Space Booking",
-    status: status === "Confirm" ? "Confirmed" : "Rejected"
-  };
+      const html = emailTemplate(emailData);
 
-  const html = emailTemplate(emailData);
+      // Send to User
+      await sendMail(
+        booking.user.email,
+        `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
+        html,
+      );
 
-  // Send to User
-  await sendMail(
-    booking.user.email,
-    `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
-    html
-  );
-
-  console.log(`Email sent to user ${booking.user.email}`);
-
-  
-
-
-} catch (e) {
-  console.error("Email sending failed:", e.message);
-}
+      console.log(`Email sent to user ${booking.user.email}`);
+    } catch (e) {
+      console.error("Email sending failed:", e.message);
+    }
 
     res.status(HttpStatus.OK).json({
       success: true,
       message: `Booking ${status === "Confirm" ? "confirmed" : "rejected"} successfully`,
-      data: booking
+      data: booking,
     });
   } catch (error) {
     res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Failed to verify booking",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -362,86 +395,97 @@ adminController.verifySpaceBooking = async (req, res) => {
 //fetch all dashboard data
 adminController.getDashboardData = async (req, res) => {
   try {
-    const { Op } = require('sequelize'); 
-    
+    const { Op } = require("sequelize");
+
     // Get total users (excluding admin if needed)
     const totalUsers = await User.count();
-    
+
     // Get total space bookings
     const totalSpaceBookings = await Booking.count();
-    
+
     // Get total meeting room bookings
     const totalMeetingRoomBookings = await roomBooking.count();
-    
+
     // Get total earnings from space bookings
-    const spaceEarnings = await Booking.sum('amount', {
-      where: {
-        status: 'Confirm' // Only count confirmed bookings
-      }
-    }) || 0;
-    
+    const spaceEarnings =
+      (await Booking.sum("amount", {
+        where: {
+          status: "Confirm", // Only count confirmed bookings
+        },
+      })) || 0;
+
     // Get total earnings from meeting room bookings
-    const meetingRoomEarnings = await roomBooking.sum('totalAmount') || 0;
-    
+    const meetingRoomEarnings = (await roomBooking.sum("totalAmount")) || 0;
+
     // Get total spaces
     const totalSpaces = await Space.count();
-    
+
     // Get total meeting rooms
     const totalMeetingRooms = await MeetingRoom.count();
-    
+
     // Get recent bookings (both space and meeting room)
     const recentSpaceBookings = await Booking.findAll({
       limit: 5,
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       include: [
-        { model: User, as: 'user', attributes: ['username', 'email'] },
-        { model: Space, as: 'space', attributes: ['spaceName'] }  
-      ]
+        { model: User, as: "user", attributes: ["username", "email"] },
+        { model: Space, as: "space", attributes: ["spaceName"] },
+      ],
     });
-    
+
     const recentMeetingRoomBookings = await roomBooking.findAll({
       limit: 5,
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       include: [
-        { model: MeetingRoom, as:'meetingRoom', attributes: ['name'] }
-      ]
+        { model: MeetingRoom, as: "meetingRoom", attributes: ["name"] },
+      ],
     });
-    
+
     // Calculate monthly earnings (current month)
     const currentDate = new Date();
-    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-    
-    const monthlySpaceEarnings = await Booking.sum('amount', {
-      where: {
-        status: 'Confirm',
-        createdAt: {
-          [Op.between]: [firstDayOfMonth, lastDayOfMonth]
-        }
-      }
-    }) || 0;
-    
-    const monthlyMeetingRoomEarnings = await roomBooking.sum('totalAmount', {
-      where: {
-        createdAt: {
-          [Op.between]: [firstDayOfMonth, lastDayOfMonth]
-        }
-      }
-    }) || 0;
-    
+    const firstDayOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1,
+    );
+    const lastDayOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      0,
+    );
+
+    const monthlySpaceEarnings =
+      (await Booking.sum("amount", {
+        where: {
+          status: "Confirm",
+          createdAt: {
+            [Op.between]: [firstDayOfMonth, lastDayOfMonth],
+          },
+        },
+      })) || 0;
+
+    const monthlyMeetingRoomEarnings =
+      (await roomBooking.sum("totalAmount", {
+        where: {
+          createdAt: {
+            [Op.between]: [firstDayOfMonth, lastDayOfMonth],
+          },
+        },
+      })) || 0;
+
     // Get pending bookings count
     const pendingSpaceBookings = await Booking.count({
       where: {
-        status: 'Pending'
-      }
+        status: "Pending",
+      },
     });
-    
+
     const pendingMeetingRoomBookings = await roomBooking.count({
       where: {
-        status: 'pending'
-      }
+        status: "pending",
+      },
     });
-    
+
     // Return dashboard data
     return res.status(HttpStatus.OK).json({
       success: true,
@@ -458,164 +502,178 @@ adminController.getDashboardData = async (req, res) => {
         recentMeetingRoomBookings,
         bookingStats: {
           spaceBookings: totalSpaceBookings,
-          meetingRoomBookings: totalMeetingRoomBookings
+          meetingRoomBookings: totalMeetingRoomBookings,
         },
         earningsStats: {
           spaceEarnings,
           meetingRoomEarnings,
-          totalEarnings: spaceEarnings + meetingRoomEarnings
-        }
-      }
+          totalEarnings: spaceEarnings + meetingRoomEarnings,
+        },
+      },
     });
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
+    console.error("Error fetching dashboard data:", error);
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Failed to retrieve dashboard data',
-      error: error.message
+      message: "Failed to retrieve dashboard data",
+      error: error.message,
     });
   }
 };
 
-// Get all active members 
- adminController.getAllActiveMembers = async (req, res) => {
-   try {
-     // Find all confirmed bookings with their user and space 
-     const activeBookings = await Booking.findAll({
-       where: {
-         status: 'Confirm'
-       },
-       include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'email', 'mobile'],
-          include: [
-            {
-              model: Kyc,
-              as: 'kyc',
-              attributes: { exclude: ['createdAt', 'updatedAt'] }
-            }
-          ]
-        },
-        {
-          model: Space,
-          as: 'space',
-          attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater', 'price']
-        },
-        
-      ],
-       order: [['id', 'ASC']]
-     });
- 
-     // Format the data 
-     const formattedMembers = activeBookings.map(booking => {
-       return {
-         id: booking.id,
-         name: booking.user.username,
-         mobile: booking.user.mobile,
-         spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk',
-         startDate: booking.startDate,
-         endDate: booking.endDate,
-         unit: booking.space.seater,
-         amount: booking.amount,
-         email: booking.user.email,
-         paymentScreenshot: booking.paymentScreenshot,
-         details: {
-           id: booking.id,
-           userId: booking.userId,
-           spaceId: booking.spaceId,
-           bookingDate: booking.date,
-           startDate: booking.startDate,
-           endDate: booking.endDate,
-           amount: booking.amount,
-           status: booking.status
-         },
-         kycDetails: (() => {
-          const k = booking.kyc || (booking.user && booking.user.kyc);
-          return k ? {
-            id: k.id,
-            bookingId: k.bookingId,
-            documentType: k.type,
-            name: k.name,
-            email: k.email,
-            mobile: k.mobile,
-            gstNumber: k.gstNumber,
-            idFront: k.idFront,
-            idBack: k.idBack,
-            pan: k.pan,
-            photo: k.photo,
-            companyName: k.companyName,
-            certificateOfIncorporation: k.certificateOfIncorporation,
-            companyPAN: k.companyPAN,
-            directorName: k.directorName,
-            din: k.din,
-            directorPAN: k.directorPAN,
-            directorPhoto: k.directorPhoto,
-            directorIdFront: k.directorIdFront,
-            directorIdBack: k.directorIdBack,
-            directorPaymentProof: k.directorPaymentProof
-          } : null;
-        })()
-       };
-     });
- 
- 
-     return res.status(HttpStatus.OK).json({
-       success: true,
-       data: formattedMembers
-     });
-   } catch (error) {
-     console.error('Error fetching active members:', error);
-     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-       success: false,
-       message: 'Failed to retrieve active members',
-       error: error.message
-     });
-   }
- };
-
-// Get all past members
-adminController.getPastMembers = async (req, res) => {
+// Get all active members
+adminController.getAllActiveMembers = async (req, res) => {
   try {
-    const { Op } = require('sequelize');
-    const currentDate = new Date();
-    
-    // Find all confirmed bookings whose end date has passed
-    const pastBookings = await Booking.findAll({
+    // Find all confirmed bookings with their user and space
+    const activeBookings = await Booking.findAll({
       where: {
-        status: 'Confirm',
-        endDate: {
-          [Op.lt]: currentDate  // endDate less than current date
-        }
+        status: "Confirm",
       },
       include: [
         {
           model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'email', 'mobile']
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+          include: [
+            {
+              model: Kyc,
+              as: "kyc",
+              attributes: { exclude: ["createdAt", "updatedAt"] },
+            },
+          ],
         },
         {
           model: Space,
-          as: 'space',
-          attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater', 'price']
+          as: "space",
+          attributes: [
+            "id",
+            "spaceName",
+            "roomNumber",
+            "cabinNumber",
+            "seater",
+            "price",
+          ],
         },
-        {
-          model: Kyc,
-          as: "kyc",
-          attributes: ['id', 'type', 'name', 'email', 'mobile', 'gstNumber']
-        }
       ],
-      order: [['endDate', 'DESC']]  
+      order: [["id", "ASC"]],
     });
 
-    // Format the data 
-    const formattedPastMembers = pastBookings.map(booking => {
+    // Format the data
+    const formattedMembers = activeBookings.map((booking) => {
       return {
         id: booking.id,
         name: booking.user.username,
         mobile: booking.user.mobile,
-        spaceType: booking.space.cabinNumber ? 'Private Office' : 'Shared Desk',
+        spaceType: booking.space.cabinNumber ? "Private Office" : "Shared Desk",
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        unit: booking.space.seater,
+        amount: booking.amount,
+        email: booking.user.email,
+        paymentScreenshot: booking.paymentScreenshot,
+        details: {
+          id: booking.id,
+          userId: booking.userId,
+          spaceId: booking.spaceId,
+          bookingDate: booking.date,
+          startDate: booking.startDate,
+          endDate: booking.endDate,
+          amount: booking.amount,
+          status: booking.status,
+        },
+        kycDetails: (() => {
+          const k = booking.kyc || (booking.user && booking.user.kyc);
+          return k
+            ? {
+                id: k.id,
+                bookingId: k.bookingId,
+                documentType: k.type,
+                name: k.name,
+                email: k.email,
+                mobile: k.mobile,
+                gstNumber: k.gstNumber,
+                idFront: k.idFront,
+                idBack: k.idBack,
+                pan: k.pan,
+                photo: k.photo,
+                companyName: k.companyName,
+                certificateOfIncorporation: k.certificateOfIncorporation,
+                companyPAN: k.companyPAN,
+                directorName: k.directorName,
+                din: k.din,
+                directorPAN: k.directorPAN,
+                directorPhoto: k.directorPhoto,
+                directorIdFront: k.directorIdFront,
+                directorIdBack: k.directorIdBack,
+                directorPaymentProof: k.directorPaymentProof,
+              }
+            : null;
+        })(),
+      };
+    });
+
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      data: formattedMembers,
+    });
+  } catch (error) {
+    console.error("Error fetching active members:", error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to retrieve active members",
+      error: error.message,
+    });
+  }
+};
+
+// Get all past members
+adminController.getPastMembers = async (req, res) => {
+  try {
+    const { Op } = require("sequelize");
+    const currentDate = new Date();
+
+    // Find all confirmed bookings whose end date has passed
+    const pastBookings = await Booking.findAll({
+      where: {
+        status: "Confirm",
+        endDate: {
+          [Op.lt]: currentDate, // endDate less than current date
+        },
+      },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        {
+          model: Space,
+          as: "space",
+          attributes: [
+            "id",
+            "spaceName",
+            "roomNumber",
+            "cabinNumber",
+            "seater",
+            "price",
+          ],
+        },
+        {
+          model: Kyc,
+          as: "kyc",
+          attributes: ["id", "type", "name", "email", "mobile", "gstNumber"],
+        },
+      ],
+      order: [["endDate", "DESC"]],
+    });
+
+    // Format the data
+    const formattedPastMembers = pastBookings.map((booking) => {
+      return {
+        id: booking.id,
+        name: booking.user.username,
+        mobile: booking.user.mobile,
+        spaceType: booking.space.cabinNumber ? "Private Office" : "Shared Desk",
         startDate: booking.startDate,
         endDate: booking.endDate,
         unit: booking.space.seater,
@@ -629,29 +687,31 @@ adminController.getPastMembers = async (req, res) => {
           startDate: booking.startDate,
           endDate: booking.endDate,
           amount: booking.amount,
-          status: booking.status
+          status: booking.status,
         },
-        kycDetails: booking.kyc ? {
-          id: booking.kyc.id,
-          documentType: booking.kyc.type,
-          name: booking.kyc.name,
-          email: booking.kyc.email,
-          mobile: booking.kyc.mobile,
-          gstNumber: booking.kyc.gstNumber
-        } : null
+        kycDetails: booking.kyc
+          ? {
+              id: booking.kyc.id,
+              documentType: booking.kyc.type,
+              name: booking.kyc.name,
+              email: booking.kyc.email,
+              mobile: booking.kyc.mobile,
+              gstNumber: booking.kyc.gstNumber,
+            }
+          : null,
       };
     });
 
     return res.status(HttpStatus.OK).json({
       success: true,
-      data: formattedPastMembers
+      data: formattedPastMembers,
     });
   } catch (error) {
-    console.error('Error fetching past members:', error);
+    console.error("Error fetching past members:", error);
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Failed to retrieve past members',
-      error: error.message
+      message: "Failed to retrieve past members",
+      error: error.message,
     });
   }
 };
@@ -698,7 +758,7 @@ adminController.verifyKyc = async (req, res) => {
         amount: "-",
         date: new Date().toDateString(),
         bookingType: "KYC",
-        status: status === "Approve" ? "KYC Approved" : "KYC Rejected"
+        status: status === "Approve" ? "KYC Approved" : "KYC Rejected",
       });
 
       // Send Email
@@ -708,7 +768,7 @@ adminController.verifyKyc = async (req, res) => {
           status === "Approve"
             ? "KYC Approved - You can now book space"
             : "KYC Rejected",
-          emailHtml
+          emailHtml,
         );
         console.log(`KYC email sent to user ${user.email}`);
       } catch (e) {
@@ -723,12 +783,12 @@ adminController.verifyKyc = async (req, res) => {
             body:
               status === "Approve"
                 ? "You can now book space"
-                : "Your KYC was rejected"
+                : "Your KYC was rejected",
           },
           data: {
             type: "kyc_status",
-            status: status
-          }
+            status: status,
+          },
         });
       } catch (e) {
         console.error("KYC push failed:", e.message);
@@ -754,13 +814,21 @@ adminController.getAllKyc = async (req, res) => {
   try {
     const kycs = await Kyc.findAll({
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
-        { model: Booking, as: 'booking', attributes: ['id', 'date', 'startDate', 'endDate'] }
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        {
+          model: Booking,
+          as: "booking",
+          attributes: ["id", "date", "startDate", "endDate"],
+        },
       ],
-      order: [['createdAt', 'DESC']]
+      order: [["createdAt", "DESC"]],
     });
 
-    const formatted = kycs.map(k => ({
+    const formatted = kycs.map((k) => ({
       id: k.id,
       userId: k.userId || (k.user ? k.user.id : null),
       bookingId: k.bookingId || (k.booking ? k.booking.id : null),
@@ -791,16 +859,36 @@ adminController.getAllKyc = async (req, res) => {
       directorPaymentProof: k.directorPaymentProof,
 
       status: k.status,
-      user: k.user ? { id: k.user.id, username: k.user.username, email: k.user.email, mobile: k.user.mobile } : null,
-      booking: k.booking ? { id: k.booking.id, date: k.booking.date, startDate: k.booking.startDate, endDate: k.booking.endDate } : null,
+      user: k.user
+        ? {
+            id: k.user.id,
+            username: k.user.username,
+            email: k.user.email,
+            mobile: k.user.mobile,
+          }
+        : null,
+      booking: k.booking
+        ? {
+            id: k.booking.id,
+            date: k.booking.date,
+            startDate: k.booking.startDate,
+            endDate: k.booking.endDate,
+          }
+        : null,
       createdAt: k.createdAt,
-      updatedAt: k.updatedAt
+      updatedAt: k.updatedAt,
     }));
 
-    return res.status(200).json({ success: true, message: 'KYC records fetched', data: formatted });
+    return res
+      .status(200)
+      .json({ success: true, message: "KYC records fetched", data: formatted });
   } catch (error) {
-    console.error('Error fetching KYC records:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch KYC records', error: error.message });
+    console.error("Error fetching KYC records:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch KYC records",
+      error: error.message,
+    });
   }
 };
 
@@ -808,16 +896,24 @@ adminController.getAllKyc = async (req, res) => {
 adminController.getKycById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) return res.status(400).json({ success: false, message: 'KYC id is required' });
+    if (!id)
+      return res
+        .status(400)
+        .json({ success: false, message: "KYC id is required" });
 
     const k = await Kyc.findByPk(id, {
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
-        { model: Booking, as: 'booking' }
-      ]
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        { model: Booking, as: "booking" },
+      ],
     });
 
-    if (!k) return res.status(404).json({ success: false, message: 'KYC not found' });
+    if (!k)
+      return res.status(404).json({ success: false, message: "KYC not found" });
 
     const payload = {
       id: k.id,
@@ -841,16 +937,29 @@ adminController.getKycById = async (req, res) => {
       directorIdFront: k.directorIdFront,
       directorIdBack: k.directorIdBack,
       directorPaymentProof: k.directorPaymentProof,
-      user: k.user ? { id: k.user.id, username: k.user.username, email: k.user.email, mobile: k.user.mobile } : null,
+      user: k.user
+        ? {
+            id: k.user.id,
+            username: k.user.username,
+            email: k.user.email,
+            mobile: k.user.mobile,
+          }
+        : null,
       booking: k.booking || null,
       createdAt: k.createdAt,
-      updatedAt: k.updatedAt
+      updatedAt: k.updatedAt,
     };
 
-    return res.status(200).json({ success: true, message: 'KYC record fetched', data: payload });
+    return res
+      .status(200)
+      .json({ success: true, message: "KYC record fetched", data: payload });
   } catch (error) {
-    console.error('Error fetching KYC by id:', error);
-    return res.status(500).json({ success: false, message: 'Failed to fetch KYC', error: error.message });
+    console.error("Error fetching KYC by id:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch KYC",
+      error: error.message,
+    });
   }
 };
 
@@ -860,33 +969,50 @@ adminController.submitNotice = async (req, res) => {
     const { id } = req.params;
     const { noticePeriodDays } = req.body;
     if (!id) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Booking ID is required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "Booking ID is required" });
     }
-    const booking = await Booking.findByPk(id, { include: [{ model: Space, as: 'space' }, { model: User, as: 'user' }] });
+    const booking = await Booking.findByPk(id, {
+      include: [
+        { model: Space, as: "space" },
+        { model: User, as: "user" },
+      ],
+    });
     if (!booking) {
-      return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'Booking not found' });
+      return res
+        .status(HttpStatus.NOT_FOUND)
+        .json({ success: false, message: "Booking not found" });
     }
     if (!req.file) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Notice PDF is required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "Notice PDF is required" });
     }
-    if (booking.status !== 'Confirm' && booking.status !== 'Notice Given') {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'Only confirmed bookings can submit notice' });
+    if (booking.status !== "Confirm" && booking.status !== "Notice Given") {
+      return res.status(HttpStatus.BAD_REQUEST).json({
+        success: false,
+        message: "Only confirmed bookings can submit notice",
+      });
     }
-    const days = Number(noticePeriodDays) > 0 ? Math.min(Number(noticePeriodDays), 365) : 30;
+    const days =
+      Number(noticePeriodDays) > 0
+        ? Math.min(Number(noticePeriodDays), 365)
+        : 30;
     booking.noticePdfPath = `/uploads/notice-pdfs/${req.file.filename}`;
     booking.noticeGiven = true;
-    booking.status = 'Notice Given';
+    booking.status = "Notice Given";
     booking.noticeSubmittedDate = new Date();
     booking.noticePeriodDays = days;
     await booking.save();
     if (booking.space) {
-      booking.space.availability = 'Available Soon';
+      booking.space.availability = "Available Soon";
       await booking.space.save();
     }
     const status = getNoticeStatus(booking);
     return res.status(HttpStatus.OK).json({
       success: true,
-      message: 'Notice submitted successfully',
+      message: "Notice submitted successfully",
       data: {
         bookingId: booking.id,
         userId: booking.userId,
@@ -894,14 +1020,14 @@ adminController.submitNotice = async (req, res) => {
         noticePeriodDays: booking.noticePeriodDays,
         noticePdfPath: booking.noticePdfPath,
         noticeSubmittedDate: booking.noticeSubmittedDate,
-        status
-      }
+        status,
+      },
     });
   } catch (error) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Failed to submit notice',
-      error: error.message
+      message: "Failed to submit notice",
+      error: error.message,
     });
   }
 };
@@ -910,14 +1036,28 @@ adminController.submitNotice = async (req, res) => {
 adminController.getBookingsPendingNotice = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
-      where: { status: 'Confirm', noticeGiven: false },
+      where: { status: "Confirm", noticeGiven: false },
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
-        { model: Space, as: 'space', attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater'] }
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        {
+          model: Space,
+          as: "space",
+          attributes: [
+            "id",
+            "spaceName",
+            "roomNumber",
+            "cabinNumber",
+            "seater",
+          ],
+        },
       ],
-      order: [['createdAt', 'DESC']]
+      order: [["createdAt", "DESC"]],
     });
-    const data = bookings.map(b => ({
+    const data = bookings.map((b) => ({
       id: b.id,
       userId: b.userId,
       userName: b.user?.username || null,
@@ -931,14 +1071,14 @@ adminController.getBookingsPendingNotice = async (req, res) => {
       startDate: b.startDate,
       endDate: b.endDate,
       amount: b.amount,
-      status: b.status
+      status: b.status,
     }));
     return res.status(HttpStatus.OK).json({ success: true, data });
   } catch (error) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Failed to fetch pending notices',
-      error: error.message
+      message: "Failed to fetch pending notices",
+      error: error.message,
     });
   }
 };
@@ -947,14 +1087,29 @@ adminController.getBookingsPendingNotice = async (req, res) => {
 adminController.getNoticeActiveBookings = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
-      where: { status: 'Notice Given' },
+      where: { status: "Notice Given" },
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'mobile'] },
-        { model: Space, as: 'space', attributes: ['id', 'spaceName', 'roomNumber', 'cabinNumber', 'seater', 'availability'] }
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        {
+          model: Space,
+          as: "space",
+          attributes: [
+            "id",
+            "spaceName",
+            "roomNumber",
+            "cabinNumber",
+            "seater",
+            "availability",
+          ],
+        },
       ],
-      order: [['createdAt', 'DESC']]
+      order: [["createdAt", "DESC"]],
     });
-    const data = bookings.map(b => {
+    const data = bookings.map((b) => {
       const s = getNoticeStatus(b);
       return {
         id: b.id,
@@ -972,15 +1127,15 @@ adminController.getNoticeActiveBookings = async (req, res) => {
         noticeSubmittedDate: b.noticeSubmittedDate,
         daysRemaining: s.daysRemaining,
         expireDate: s.expireDate,
-        isInNotice: s.isInNotice
+        isInNotice: s.isInNotice,
       };
     });
     return res.status(HttpStatus.OK).json({ success: true, data });
   } catch (error) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Failed to fetch active notices',
-      error: error.message
+      message: "Failed to fetch active notices",
+      error: error.message,
     });
   }
 };
@@ -989,17 +1144,38 @@ adminController.registerAdminPushToken = async (req, res) => {
   try {
     const { token, deviceType, deviceId } = req.body || {};
     if (!token) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "token required" });
     }
-    await FCMToken.upsert({ token: String(token), userId: req.user?.id || null, role: 'admin', deviceId: deviceId || null, deviceType: deviceType || null });
-    console.log('Admin push token registered:', { token, deviceType, deviceId, adminId: req.user?.id });
+    await FCMToken.upsert({
+      token: String(token),
+      userId: req.user?.id || null,
+      role: "admin",
+      deviceId: deviceId || null,
+      deviceType: deviceType || null,
+    });
+    console.log("Admin push token registered:", {
+      token,
+      deviceType,
+      deviceId,
+      adminId: req.user?.id,
+    });
     return res.status(HttpStatus.OK).json({
       success: true,
-      message: 'Push token registered successfully',
-      data: { token, deviceType: deviceType || null, deviceId: deviceId || null }
+      message: "Push token registered successfully",
+      data: {
+        token,
+        deviceType: deviceType || null,
+        deviceId: deviceId || null,
+      },
     });
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to register admin token', error: err.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to register admin token",
+      error: err.message,
+    });
   }
 };
 
@@ -1007,37 +1183,45 @@ adminController.subscribePushTopic = async (req, res) => {
   try {
     const { token, topic } = req.body || {};
     if (!token || !topic) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token and topic required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "token and topic required" });
     }
-    
+
     // Allowed topics for admins - matches frontend subscription topics
     const allowed = new Set([
-      'all_users',                        // Broadcast notifications
-      'cafeteria_updates',                // Cafeteria/Refreshment orders
-      'booking_updates',                  // Space bookings
-      'meeting_room_updates',             // Meeting rooms
-      'admins',                           // All admins broadcast
-      'cafeteria_admin',                  // Cafeteria admin notifications
-      `admin_${req.user.id}`,             // Personal admin notifications
-      'booking_admin',                    // Booking admin notifications
-      'meeting_room_admin',               // Meeting room admin notifications
-      'all_admins',                       // All admin updates
-      'payment_notifications',            // Payment received notifications
-      'user_activity',                    // User activity monitoring
+      "all_users", // Broadcast notifications
+      "cafeteria_updates", // Cafeteria/Refreshment orders
+      "booking_updates", // Space bookings
+      "meeting_room_updates", // Meeting rooms
+      "admins", // All admins broadcast
+      "cafeteria_admin", // Cafeteria admin notifications
+      `admin_${req.user.id}`, // Personal admin notifications
+      "booking_admin", // Booking admin notifications
+      "meeting_room_admin", // Meeting room admin notifications
+      "all_admins", // All admin updates
+      "payment_notifications", // Payment received notifications
+      "user_activity", // User activity monitoring
     ]);
-    
+
     if (!allowed.has(String(topic))) {
-      return res.status(HttpStatus.FORBIDDEN).json({ 
-        success: false, 
+      return res.status(HttpStatus.FORBIDDEN).json({
+        success: false,
         message: `Topic "${topic}" not allowed`,
-        allowedTopics: Array.from(allowed).sort()
+        allowedTopics: Array.from(allowed).sort(),
       });
     }
-    
+
     await subscribeTokenToTopic(token, topic);
-    return res.status(HttpStatus.OK).json({ success: true, message: `Subscribed to ${topic}` });
+    return res
+      .status(HttpStatus.OK)
+      .json({ success: true, message: `Subscribed to ${topic}` });
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Subscribe failed', error: err.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Subscribe failed",
+      error: err.message,
+    });
   }
 };
 
@@ -1045,38 +1229,41 @@ adminController.unsubscribePushTopic = async (req, res) => {
   try {
     const { token, topic } = req.body || {};
     if (!token || !topic) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token and topic required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "token and topic required" });
     }
     await unsubscribeTokenFromTopic(token, topic);
-    return res.status(HttpStatus.OK).json({ success: true, message: `Unsubscribed from ${topic}` });
+    return res
+      .status(HttpStatus.OK)
+      .json({ success: true, message: `Unsubscribed from ${topic}` });
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Unsubscribe failed', error: err.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Unsubscribe failed",
+      error: err.message,
+    });
   }
 };
 
 adminController.testNotification = async (req, res) => {
-
   try {
-
     const result = await sendPushToTopic("admins", {
       notification: {
         title: "Test Notification",
-        body: "Hello from CoHopers"
+        body: "Hello from CoHopers",
       },
       data: {
-        type: "test"
-      }
+        type: "test",
+      },
     });
 
     res.json({
       success: true,
-      result
+      result,
     });
-
   } catch (err) {
-
     res.status(500).json(err);
-
   }
 };
 
@@ -1084,15 +1271,21 @@ adminController.sendTestPushToTopic = async (req, res) => {
   try {
     const { topic, title, body, data } = req.body || {};
     if (!topic) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'topic required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "topic required" });
     }
     const id = await sendPushToTopic(String(topic), {
-      notification: { title: String(title || ''), body: String(body || '') },
-      data: data || {}
+      notification: { title: String(title || ""), body: String(body || "") },
+      data: data || {},
     });
     return res.status(HttpStatus.OK).json({ success: true, id });
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to send to topic', error: err.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to send to topic",
+      error: err.message,
+    });
   }
 };
 
@@ -1100,15 +1293,21 @@ adminController.sendTestPushToToken = async (req, res) => {
   try {
     const { token, title, body, data } = req.body || {};
     if (!token) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ success: false, message: 'token required' });
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ success: false, message: "token required" });
     }
     const id = await sendPushToToken(String(token), {
-      notification: { title: String(title || ''), body: String(body || '') },
-      data: data || {}
+      notification: { title: String(title || ""), body: String(body || "") },
+      data: data || {},
     });
     return res.status(HttpStatus.OK).json({ success: true, id });
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to send to token', error: err.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to send to token",
+      error: err.message,
+    });
   }
 };
 
@@ -1117,7 +1316,7 @@ adminController.testmail = async (req, res) => {
     const result = await sendMail(
       "manoranjanbasantia2002@gmail.com",
       "Test Email",
-      "<h1>Email Working </h1>"
+      "<h1>Email Working </h1>",
     );
 
     res.json(result);
