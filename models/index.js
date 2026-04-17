@@ -8,6 +8,7 @@ const roomBooking = require("./roomBooking.model");
 const teamMember = require("../models/teamMember.model");
 const CafeteriaOrder = require("./cafeteriaOrder.model");
 const FCMToken = require("./fcmToken.model");
+const Utility = require("./utility.model");
 
 // Space & AvailableDate
 Space.hasMany(AvailableDate, {
@@ -112,4 +113,5 @@ module.exports = {
   teamMember,
   CafeteriaOrder,
   FCMToken,
+  Utility,
 };

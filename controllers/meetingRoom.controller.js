@@ -2,6 +2,7 @@ const httpStatus = require("../enums/httpStatusCode.enum");
 const MeetingRoom = require("../models/meetingRoom.model");
 const RoomBooking = require("../models/roomBooking.model");
 const User = require("../models/user.model");
+const Kyc = require("../models/kyc.model");
 const { Op } = require("sequelize");
 const {
   sendMail,
@@ -12,13 +13,234 @@ const { emailTemplate } = require("../utils/emailTemplate");
 
 const meetingRoomController = {};
 
+const BLOCKING_BOOKING_STATUSES = [
+  "pending",
+  "Pending",
+  "confirm",
+  "Confirm",
+  "confirmed",
+  "Confirmed",
+];
+
+const normalizeSlot = (slot) => (slot || "").toString().replace(/\s+/g, "");
+
+const normalizeBookingType = (bookingType) =>
+  (bookingType || "").toString().trim().toLowerCase();
+
+const isWholeDayBooking = (bookingType) =>
+  normalizeBookingType(bookingType) === "whole day";
+
+const isHourlyBooking = (bookingType) =>
+  normalizeBookingType(bookingType) === "hourly";
+
+const isConfirmedBookingStatus = (status) => {
+  const normalizedStatus = (status || "").toString().trim().toLowerCase();
+  return normalizedStatus === "confirm" || normalizedStatus === "confirmed";
+};
+
+const getBookingSlots = (timeSlots) => {
+  if (!timeSlots) {
+    return [];
+  }
+
+  if (Array.isArray(timeSlots)) {
+    return timeSlots;
+  }
+
+  if (typeof timeSlots === "string") {
+    try {
+      const parsedSlots = JSON.parse(timeSlots);
+      if (Array.isArray(parsedSlots)) {
+        return parsedSlots;
+      }
+    } catch (error) {
+      return timeSlots
+        .split(",")
+        .map((slot) => slot.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
+const parseBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalizedValue = value.trim().toLowerCase();
+    if (["true", "1", "yes", "active"].includes(normalizedValue)) {
+      return true;
+    }
+    if (["false", "0", "no", "inactive"].includes(normalizedValue)) {
+      return false;
+    }
+  }
+
+  return null;
+};
+
+meetingRoomController.addMeetingRoom = async (req, res) => {
+  try {
+    const {
+      name,
+      capacityType,
+      hourlyRate,
+      dayRate,
+      memberHourlyRate,
+      memberDayRate,
+      description,
+      openTime,
+      closeTime,
+      status,
+    } = req.body;
+
+    if (
+      !name ||
+      !capacityType ||
+      hourlyRate === undefined ||
+      dayRate === undefined ||
+      memberHourlyRate === undefined ||
+      memberDayRate === undefined
+    ) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "Name, capacity type, hourly rate, day rate, member hourly rate and member day rate are required",
+      );
+    }
+
+    const numericFields = {
+      hourlyRate: Number(hourlyRate),
+      dayRate: Number(dayRate),
+      memberHourlyRate: Number(memberHourlyRate),
+      memberDayRate: Number(memberDayRate),
+    };
+
+    const hasInvalidRate = Object.values(numericFields).some(
+      (value) => Number.isNaN(value) || value < 0,
+    );
+
+    if (hasInvalidRate) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "All rate fields must be valid positive numbers",
+      );
+    }
+
+    const existingRoom = await MeetingRoom.findOne({
+      where: { capacityType: capacityType.trim() },
+    });
+
+    if (existingRoom) {
+      return res.error(
+        httpStatus.CONFLICT,
+        false,
+        "A meeting room with this capacity type already exists",
+      );
+    }
+
+    const parsedStatus =
+      status === undefined ? true : parseBoolean(status);
+
+    if (status !== undefined && parsedStatus === null) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "Status must be a boolean value",
+      );
+    }
+
+    // Handle image upload
+    let imagePath = null;
+    if (req.file && req.file.filename) {
+      imagePath = `/uploads/meeting-rooms/${req.file.filename}`;
+    }
+
+    const room = await MeetingRoom.create({
+      name: name.trim(),
+      capacityType: capacityType.trim(),
+      hourlyRate: numericFields.hourlyRate,
+      dayRate: numericFields.dayRate,
+      memberHourlyRate: numericFields.memberHourlyRate,
+      memberDayRate: numericFields.memberDayRate,
+      description: description ? description.trim() : null,
+      openTime: openTime || "09:00 AM",
+      closeTime: closeTime || "06:30 PM",
+      status: parsedStatus,
+      image: imagePath,
+    });
+
+    return res.success(
+      httpStatus.CREATED,
+      true,
+      "Meeting room added successfully",
+      room,
+    );
+  } catch (error) {
+    console.error("Error adding meeting room:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error,
+    );
+  }
+};
+
+// Get all meeting rooms (user side)
+meetingRoomController.getMeetingRooms = async (req, res) => {
+  try {
+    const rooms = await MeetingRoom.findAll({
+      where: { status: true },
+      attributes: [
+        "id",
+        "name",
+        "capacityType",
+        "hourlyRate",
+        "dayRate",
+        "memberHourlyRate",
+        "memberDayRate",
+        "description",
+        "openTime",
+        "closeTime",
+        "image",
+      ],
+      order: [["createdAt", "ASC"]],
+    });
+
+    return res.success(
+      httpStatus.OK,
+      true,
+      "Meeting rooms fetched successfully",
+      rooms,
+    );
+  } catch (error) {
+    console.error("Error fetching meeting rooms:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error,
+    );
+  }
+};
+
 // Get room types (seating capacities)
 meetingRoomController.getRoomTypes = async (req, res) => {
   try {
-    return res.success(httpStatus.OK, true, "Room types fetched successfully", [
-      { id: 1, name: "4-6 Seater" },
-      { id: 2, name: "10-12 Seater" },
-    ]);
+    const roomTypes = await MeetingRoom.findAll({
+      attributes: ["id", "capacityType"],
+      where: { status: true },
+      order: [["createdAt", "ASC"]],
+    });
+
+    return res.success(
+      httpStatus.OK,
+      true,
+      "Room types fetched successfully",
+      roomTypes.map((room) => ({ id: room.id, name: room.capacityType })),
+    );
   } catch (error) {
     console.error("Error fetching room types:", error);
     return res.error(
@@ -221,15 +443,17 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
     }
 
     // Include both 'pending' and 'confirmed' so slots are blocked once a user books & uploads payment.
-    const bookedStatuses = ["pending", "confirmed"];
-
     const existingBookings = await RoomBooking.findAll({
       where: {
         meetingRoomId: room.id,
         bookingDate: date,
-        status: { [Op.in]: bookedStatuses },
+        status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
       },
     });
+
+    const wholeDayBookingExists = existingBookings.some((booking) =>
+      isWholeDayBooking(booking.bookingType),
+    );
 
     // Generate all possible time slots (assumes generateTimeSlots returns strings like "09:00 - 09:30")
     let openTime = room.openTime || "09:00 AM";
@@ -251,18 +475,17 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
       durationMinutes,
     );
 
-    // Collect booked slots from DB
-    const bookedSlotsRaw = existingBookings.flatMap((b) => b.timeSlots || []);
+    const bookedSlotsRaw = existingBookings
+      .filter((booking) => isHourlyBooking(booking.bookingType))
+      .flatMap((booking) => getBookingSlots(booking.timeSlots));
 
-    // Normalization helper: remove spaces so "09:00 - 10:00" and "09:00-10:00" compare equal
-    const normalize = (s) => (s || "").toString().replace(/\s+/g, "");
+    const bookedSet = new Set(bookedSlotsRaw.map(normalizeSlot));
 
-    const bookedSet = new Set(bookedSlotsRaw.map(normalize));
-
-    // Filter out booked slots using normalized comparison
-    const availableSlots = allTimeSlots.filter(
-      (slot) => !bookedSet.has(normalize(slot)),
-    );
+    const availableSlots = wholeDayBookingExists
+      ? []
+      : allTimeSlots.filter(
+          (slot) => !bookedSet.has(normalizeSlot(slot)),
+        );
 
     return res.success(
       httpStatus.OK,
@@ -274,6 +497,7 @@ meetingRoomController.getAvailableTimeSlots = async (req, res) => {
           // convert back to readable format (insert space around dash)
           return s.replace("-", " - ");
         }),
+        wholeDayBooked: wholeDayBookingExists,
         openTime,
         closeTime,
         slotDuration: `${durationMinutes} Minutes`,
@@ -430,35 +654,54 @@ meetingRoomController.bookRoom = async (req, res) => {
       totalAmount = basePrice;
     }
 
-    // Check for availability if hourly booking
-    if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
-      const existingBookings = await RoomBooking.findAll({
-        where: {
-          meetingRoomId: room.id,
-          bookingDate,
-          status: "confirmed",
-        },
-      });
+    const existingBookings = await RoomBooking.findAll({
+      where: {
+        meetingRoomId: room.id,
+        bookingDate,
+        status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
+      },
+    });
 
-      // Check for time slot conflicts
-      const bookedSlots = [];
-      existingBookings.forEach((booking) => {
-        if (booking.timeSlots && Array.isArray(booking.timeSlots)) {
-          bookedSlots.push(...booking.timeSlots);
-        }
-      });
+    const wholeDayBookingExists = existingBookings.some((booking) =>
+      isWholeDayBooking(booking.bookingType),
+    );
 
-      // Check if any requested slot is already booked
-      const conflictingSlots = timeSlots.filter((slot) =>
-        bookedSlots.includes(slot),
-      );
-      if (conflictingSlots.length > 0) {
+    if (isHourlyBooking(bookingType) && timeSlots && timeSlots.length > 0) {
+      if (wholeDayBookingExists) {
         return res.error(
           httpStatus.CONFLICT,
           false,
-          `The following time slots are already booked: ${conflictingSlots.join(", ")}`,
+          "This seater is already booked for the whole day on the selected date",
         );
       }
+
+      const bookedSlots = existingBookings
+        .filter((booking) => isHourlyBooking(booking.bookingType))
+        .flatMap((booking) => getBookingSlots(booking.timeSlots));
+
+      const bookedSlotSet = new Set(bookedSlots.map(normalizeSlot));
+
+      const conflictingSlots = timeSlots.filter((slot) =>
+        bookedSlotSet.has(normalizeSlot(slot)),
+      );
+
+      if (conflictingSlots.length > 0) {
+        const uniqueConflictingSlots = [...new Set(conflictingSlots)];
+
+        return res.error(
+          httpStatus.CONFLICT,
+          false,
+          `The following time slots are already booked: ${uniqueConflictingSlots.join(", ")}`,
+        );
+      }
+    }
+
+    if (isWholeDayBooking(bookingType) && existingBookings.length > 0) {
+      return res.error(
+        httpStatus.CONFLICT,
+        false,
+        "This seater is not available for a whole-day booking on the selected date",
+      );
     }
 
     // Prepare file paths
@@ -474,7 +717,7 @@ meetingRoomController.bookRoom = async (req, res) => {
       bookingType,
       memberType,
       totalAmount: parseFloat(totalAmount.toFixed(2)),
-      status: memberType === "Member" ? "confirm" : "pending", // Auto-confirm for members
+      status: memberType === "Member" ? "Confirm" : "pending", // Auto-confirm for members
       notes,
       gst: gst || null,
     };
@@ -498,14 +741,17 @@ meetingRoomController.bookRoom = async (req, res) => {
     const booking = await RoomBooking.create(bookingData);
     // EMAIL and PUSH NOTIFICATIONS
     try {
+      // Fetch KYC for company name
+      const kyc = await Kyc.findOne({ where: { userId } });
+      const kycCompanyName = kyc ? kyc.companyName || kyc.name || "N/A" : "N/A";
       // Prepare common data
       const emailData = {
         clientName: userName,
-        companyName: req.user.companyName || "N/A",
+        companyName: kycCompanyName,
         amount: booking.totalAmount,
         date: booking.bookingDate,
         bookingType: "Meeting Room",
-        status: booking.status === "confirmed" ? "Confirmed" : "Pending",
+        status: isConfirmedBookingStatus(booking.status) ? "Confirmed" : "Pending",
       };
 
       const html = emailTemplate(emailData);
@@ -526,7 +772,7 @@ meetingRoomController.bookRoom = async (req, res) => {
       try {
         await sendMail(
           userEmail,
-          booking.status === "confirmed"
+          isConfirmedBookingStatus(booking.status)
             ? "Meeting Room Booking Confirmed"
             : "Meeting Room Booking Pending",
           html,
@@ -542,7 +788,7 @@ meetingRoomController.bookRoom = async (req, res) => {
           notification: {
             title: "Meeting Room Booking",
             body:
-              booking.status === "confirmed"
+              isConfirmedBookingStatus(booking.status)
                 ? "Your booking is confirmed"
                 : "Your booking is pending verification",
           },
@@ -630,9 +876,11 @@ meetingRoomController.verifyBooking = async (req, res) => {
 
     //  EMAIL + PUSH
     try {
+      const bookingKyc = await Kyc.findOne({ where: { userId: booking.userId } });
+      const bookingCompanyName = bookingKyc ? bookingKyc.companyName || bookingKyc.name || "N/A" : "N/A";
       const emailData = {
         clientName: booking.username,
-        companyName: booking.companyName || "N/A",
+        companyName: bookingCompanyName,
         amount: booking.totalAmount,
         date: booking.bookingDate,
         bookingType: "Meeting Room",
@@ -740,27 +988,39 @@ meetingRoomController.getAvailableDays = async (req, res) => {
 
     // Block days if there is any booking in 'pending' or 'confirmed' status
     // (both Hourly and Whole Day bookings block full-day bookings)
-    const bookedStatuses = ["pending", "confirmed"];
-
     const bookings = await RoomBooking.findAll({
       where: {
         meetingRoomId: room.id,
         bookingDate: { [Op.between]: [startStr, endStr] },
-        status: { [Op.in]: bookedStatuses },
+        status: { [Op.in]: BLOCKING_BOOKING_STATUSES },
       },
       attributes: ["bookingDate", "bookingType", "timeSlots"],
     });
 
-    const bookedDateSet = new Set(bookings.map((b) => b.bookingDate));
+    const wholeDayBookedDateSet = new Set(
+      bookings
+        .filter((booking) => isWholeDayBooking(booking.bookingType))
+        .map((booking) => booking.bookingDate),
+    );
+
+    const partiallyBookedDateSet = new Set(
+      bookings
+        .filter((booking) => isHourlyBooking(booking.bookingType))
+        .map((booking) => booking.bookingDate),
+    );
 
     const freeDates = [];
     const bookedDates = [];
+    const partiallyBookedDates = [];
 
     for (let d = 1; d <= lastDay; d++) {
       const dateObj = new Date(y, m - 1, d);
       const dateStr = dateObj.toISOString().slice(0, 10);
-      if (bookedDateSet.has(dateStr)) {
+      if (wholeDayBookedDateSet.has(dateStr)) {
         bookedDates.push(dateStr);
+      } else if (partiallyBookedDateSet.has(dateStr)) {
+        partiallyBookedDates.push(dateStr);
+        freeDates.push(dateStr);
       } else {
         freeDates.push(dateStr);
       }
@@ -777,6 +1037,7 @@ meetingRoomController.getAvailableDays = async (req, res) => {
         month: m,
         freeDates,
         bookedDates,
+        partiallyBookedDates,
       },
     );
   } catch (error) {

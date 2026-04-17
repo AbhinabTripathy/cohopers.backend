@@ -25,10 +25,14 @@ bookingController.createBooking = async (req, res) => {
 
     // Email to admin
     try {
+      const kyc = await Kyc.findOne({ where: { userId: req.user.id } });
+      const clientName = req.user.username;
+      const companyName = kyc ? kyc.companyName || kyc.name || "N/A" : "N/A";
       const html = `
         <h2>New Booking Created</h2>
         <p><b>Booking ID:</b> ${booking.id}</p>
-        <p><b>User ID:</b> ${booking.userId}</p>
+        <p><b>Client Name:</b> ${clientName}</p>
+        <p><b>Company Name:</b> ${companyName}</p>
         <p><b>Space ID:</b> ${booking.spaceId}</p>
         <p><b>Amount:</b> ₹${booking.amount}</p>
         <p>Please review this booking in admin panel.</p>
@@ -192,9 +196,9 @@ bookingController.submitKyc = async (req, res) => {
 
     //  Send Email to Admin
     await sendMail(
-      "info@cohopers.in",
+      process.env.ADMIN_EMAIL,
       "New KYC Submission",
-      `A user has submitted ${type} KYC for user ID: ${userId}`,
+      `<h2>New KYC Submission</h2><p><b>Client Name:</b> ${name || req.user.username}</p><p><b>Company Name:</b> ${companyName || "N/A"}</p><p><b>KYC Type:</b> ${type}</p><p><b>User ID:</b> ${userId}</p>`,
     );
 
     res.json({ message: "KYC submitted successfully", kyc });

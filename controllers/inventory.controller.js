@@ -1,4 +1,4 @@
-const { Space, AvailableDate, Booking, teamMember } = require("../models");
+const { Space, AvailableDate, Booking, teamMember, Utility } = require("../models");
 const upload = require("../middlewares/upload.middleware");
 const path = require("path");
 const fs = require("fs");
@@ -514,6 +514,163 @@ inventoryController.getAllTeamMembers = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Error getting all team members:", error);
+    next(error);
+  }
+};
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+// Add a new utility (admin only)
+inventoryController.addUtility = async (req, res, next) => {
+  try {
+    const { name, category, price, description, availability } = req.body;
+
+    if (!name || !category || price === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, category and price are required",
+      });
+    }
+
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Price must be a valid positive number",
+      });
+    }
+
+    const validAvailability = ["Available", "Not Available"];
+    const finalAvailability = validAvailability.includes(availability)
+      ? availability
+      : "Available";
+
+    const utility = await Utility.create({
+      name: name.trim(),
+      category: category.trim(),
+      price: parsedPrice,
+      description: description ? description.trim() : null,
+      availability: finalAvailability,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Utility added successfully",
+      data: utility,
+    });
+  } catch (error) {
+    console.error("Error adding utility:", error);
+    next(error);
+  }
+};
+
+// Update an existing utility (admin only)
+inventoryController.updateUtility = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, category, price, description, availability } = req.body;
+
+    const utility = await Utility.findByPk(id);
+    if (!utility) {
+      return res.status(404).json({
+        success: false,
+        message: "Utility not found",
+      });
+    }
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (category !== undefined) updateData.category = category.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : null;
+    if (price !== undefined) {
+      const parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Price must be a valid positive number",
+        });
+      }
+      updateData.price = parsedPrice;
+    }
+    if (availability !== undefined) {
+      const validAvailability = ["Available", "Not Available"];
+      if (!validAvailability.includes(availability)) {
+        return res.status(400).json({
+          success: false,
+          message: "Availability must be 'Available' or 'Not Available'",
+        });
+      }
+      updateData.availability = availability;
+    }
+
+    await utility.update(updateData);
+
+    return res.status(200).json({
+      success: true,
+      message: "Utility updated successfully",
+      data: utility,
+    });
+  } catch (error) {
+    console.error("Error updating utility:", error);
+    next(error);
+  }
+};
+
+// Get all utilities
+inventoryController.getAllUtilities = async (req, res, next) => {
+  try {
+    const utilities = await Utility.findAll({ order: [["createdAt", "DESC"]] });
+    return res.status(200).json({
+      success: true,
+      message: "Utilities retrieved successfully",
+      data: utilities,
+    });
+  } catch (error) {
+    console.error("Error fetching utilities:", error);
+    next(error);
+  }
+};
+
+// Get utility by id
+inventoryController.getUtilityById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const utility = await Utility.findByPk(id);
+    if (!utility) {
+      return res.status(404).json({
+        success: false,
+        message: "Utility not found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Utility retrieved successfully",
+      data: utility,
+    });
+  } catch (error) {
+    console.error("Error fetching utility:", error);
+    next(error);
+  }
+};
+
+// Delete utility
+inventoryController.deleteUtility = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const utility = await Utility.findByPk(id);
+    if (!utility) {
+      return res.status(404).json({
+        success: false,
+        message: "Utility not found",
+      });
+    }
+    await utility.destroy();
+    return res.status(200).json({
+      success: true,
+      message: "Utility deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting utility:", error);
     next(error);
   }
 };

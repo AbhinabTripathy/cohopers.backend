@@ -31,6 +31,7 @@ app.use(responseMessages);
 
 // Serve static files from uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");
@@ -39,6 +40,7 @@ const bookingRoutes = require("./routes/booking.routes");
 const meetingRoomRoutes = require("./routes/meetingRoom.routes");
 const cafeteriaRoutes = require("./routes/cafeteria.routes");
 const invoiceRoutes = require("./routes/invoice.routes");
+const utilityRoutes = require("./routes/utility.routes");
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
@@ -47,6 +49,7 @@ app.use("/api/booking", bookingRoutes);
 app.use("/api/meetingrooms", meetingRoomRoutes);
 app.use("/api/cafeteria", cafeteriaRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/utilities", utilityRoutes);
 
 //middlewares
 app.use(handleNotFound);

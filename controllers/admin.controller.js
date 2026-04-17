@@ -284,7 +284,7 @@ adminController.verifySpaceBooking = async (req, res) => {
         {
           model: User,
           as: "user",
-          attributes: ["id", "username", "email"],
+          attributes: ["id", "userName", "email"],
         },
         {
           model: Space,
@@ -352,20 +352,18 @@ adminController.verifySpaceBooking = async (req, res) => {
     } catch (e) {
       console.error("Push send failed:", e);
     }
-    const kyc = await Kyc.findOne({
-      where: { userId: booking.userId },
-      order: [["createdAt", "DESC"]],
-    });
+
     // Send email notification to user
     try {
       const emailData = {
-        clientName: booking.user?.username || "N/A",
-        companyName: kyc?.companyName || "N/A",
+        clientName: booking.user.userName,
+        companyName: booking.kyc?.companyName || "N/A",
         amount: booking.amount,
         date: booking.date,
         bookingType: "Space Booking",
         status: status === "Confirm" ? "Confirmed" : "Rejected",
       };
+
       const html = emailTemplate(emailData);
 
       // Send to User

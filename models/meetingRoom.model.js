@@ -51,6 +51,10 @@ const MeetingRoom = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "meeting_rooms",
