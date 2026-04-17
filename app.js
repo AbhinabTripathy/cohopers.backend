@@ -4,7 +4,7 @@ const sequelize = require("./config/db");
 const responseMessages = require("./middlewares/response.middleware");
 const handleNotFound = require("./middlewares/notFound.middleware");
 const errorHandler = require("./middlewares/errorHandler.middleware");
-const seedMeetingRooms = require("./seeders/meetingRoom.seeder");
+const seedMeetingRooms = require("./seeders/meetingRoom.Seeder");
 const seedSpaces = require("./seeders/seedSpaces");
 const path = require("path");
 
