@@ -21,6 +21,12 @@ router.post(
   fileUpload("meeting-rooms").single("image"),
   meetingRoomController.addMeetingRoom
 );
+router.put(
+  "/:id",
+  authAdminMiddleware,
+  fileUpload("meeting-rooms").single("image"),
+  meetingRoomController.updateMeetingRoom
+);
 router.post(
   "/book",
   authMiddleware,

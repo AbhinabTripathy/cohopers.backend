@@ -843,6 +843,78 @@ meetingRoomController.bookRoom = async (req, res) => {
   }
 };
 
+// Update a meeting room (admin only)
+meetingRoomController.updateMeetingRoom = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      capacityType,
+      hourlyRate,
+      dayRate,
+      memberHourlyRate,
+      memberDayRate,
+      description,
+      openTime,
+      closeTime,
+      status,
+    } = req.body;
+
+    const room = await MeetingRoom.findByPk(id);
+    if (!room) {
+      return res.error(httpStatus.NOT_FOUND, false, "Meeting room not found");
+    }
+
+    const updateData = {};
+
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : null;
+    if (openTime !== undefined) updateData.openTime = openTime;
+    if (closeTime !== undefined) updateData.closeTime = closeTime;
+
+    if (capacityType !== undefined) updateData.capacityType = capacityType.trim();
+
+    const rateFields = { hourlyRate, dayRate, memberHourlyRate, memberDayRate };
+    for (const [key, value] of Object.entries(rateFields)) {
+      if (value !== undefined) {
+        const parsed = Number(value);
+        if (isNaN(parsed) || parsed < 0) {
+          return res.error(
+            httpStatus.BAD_REQUEST,
+            false,
+            `${key} must be a valid positive number`,
+          );
+        }
+        updateData[key] = parsed;
+      }
+    }
+
+    if (status !== undefined) {
+      const parsedStatus = parseBoolean(status);
+      if (parsedStatus === null) {
+        return res.error(httpStatus.BAD_REQUEST, false, "Status must be a boolean value");
+      }
+      updateData.status = parsedStatus;
+    }
+
+    if (req.file && req.file.filename) {
+      updateData.image = `/uploads/meeting-rooms/${req.file.filename}`;
+    }
+
+    await room.update(updateData);
+
+    return res.success(httpStatus.OK, true, "Meeting room updated successfully", room);
+  } catch (error) {
+    console.error("Error updating meeting room:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error,
+    );
+  }
+};
+
 // for admin to verify bookings
 meetingRoomController.verifyBooking = async (req, res) => {
   try {
