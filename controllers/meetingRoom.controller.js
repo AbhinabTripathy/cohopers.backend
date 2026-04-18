@@ -192,7 +192,6 @@ meetingRoomController.addMeetingRoom = async (req, res) => {
 meetingRoomController.getMeetingRooms = async (req, res) => {
   try {
     const rooms = await MeetingRoom.findAll({
-      where: { status: true },
       attributes: [
         "id",
         "name",
@@ -231,8 +230,7 @@ meetingRoomController.getMeetingRooms = async (req, res) => {
 meetingRoomController.getRoomTypes = async (req, res) => {
   try {
     const roomTypes = await MeetingRoom.findAll({
-      attributes: ["id", "capacityType"],
-      where: { status: true },
+      attributes: ["id", "capacityType", "status"],
       order: [["createdAt", "ASC"]],
     });
 
