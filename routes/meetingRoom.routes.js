@@ -27,6 +27,11 @@ router.put(
   fileUpload("meeting-rooms").single("image"),
   meetingRoomController.updateMeetingRoom
 );
+router.delete(
+  "/:id",
+  authAdminMiddleware,
+  meetingRoomController.deleteMeetingRoom
+);
 router.post(
   "/book",
   authMiddleware,

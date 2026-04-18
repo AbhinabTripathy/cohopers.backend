@@ -1123,4 +1123,28 @@ meetingRoomController.getAvailableDays = async (req, res) => {
   }
 };
 
+// Delete a meeting room (admin only)
+meetingRoomController.deleteMeetingRoom = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const room = await MeetingRoom.findByPk(id);
+    if (!room) {
+      return res.error(httpStatus.NOT_FOUND, false, "Meeting room not found");
+    }
+
+    await room.destroy();
+
+    return res.success(httpStatus.OK, true, "Meeting room deleted successfully");
+  } catch (error) {
+    console.error("Error deleting meeting room:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Internal server error",
+      error,
+    );
+  }
+};
+
 module.exports = meetingRoomController;
