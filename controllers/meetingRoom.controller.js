@@ -890,11 +890,11 @@ meetingRoomController.updateMeetingRoom = async (req, res) => {
     }
 
     if (status !== undefined) {
-      const parsedStatus = parseBoolean(status);
-      if (parsedStatus === null) {
-        return res.error(httpStatus.BAD_REQUEST, false, "Status must be a boolean value");
+      const validStatuses = [true, false, "true", "false"];
+      if (!validStatuses.includes(status)) {
+        return res.error(httpStatus.BAD_REQUEST, false, "Status must be true or false");
       }
-      updateData.status = parsedStatus;
+      updateData.status = status === true || status === "true";
     }
 
     if (req.file && req.file.filename) {
