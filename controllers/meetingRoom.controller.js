@@ -205,6 +205,7 @@ meetingRoomController.getMeetingRooms = async (req, res) => {
         "openTime",
         "closeTime",
         "image",
+        "status",
       ],
       order: [["createdAt", "ASC"]],
     });
