@@ -9,6 +9,7 @@ const teamMember = require("../models/teamMember.model");
 const CafeteriaOrder = require("./cafeteriaOrder.model");
 const FCMToken = require("./fcmToken.model");
 const Utility = require("./utility.model");
+const UtilityOrder = require("./utilityOrder.model");
 
 // Space & AvailableDate
 Space.hasMany(AvailableDate, {
@@ -101,6 +102,28 @@ User.hasMany(FCMToken, {
 });
 FCMToken.belongsTo(User, { foreignKey: "userId", as: "user" });
 
+// Utility Orders
+User.hasMany(UtilityOrder, {
+  foreignKey: "userId",
+  as: "utilityOrders",
+  onDelete: "CASCADE",
+});
+UtilityOrder.belongsTo(User, { foreignKey: "userId", as: "user" });
+
+Utility.hasMany(UtilityOrder, {
+  foreignKey: "utilityId",
+  as: "utilityOrders",
+  onDelete: "CASCADE",
+});
+UtilityOrder.belongsTo(Utility, { foreignKey: "utilityId", as: "utility" });
+
+Space.hasMany(UtilityOrder, {
+  foreignKey: "spaceId",
+  as: "spaceUtilityOrders",
+  onDelete: "SET NULL",
+});
+UtilityOrder.belongsTo(Space, { foreignKey: "spaceId", as: "space" });
+
 // Export all models
 module.exports = {
   Space,
@@ -114,4 +137,5 @@ module.exports = {
   CafeteriaOrder,
   FCMToken,
   Utility,
+  UtilityOrder,
 };

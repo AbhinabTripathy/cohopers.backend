@@ -732,4 +732,148 @@ userController.getUserHistory = async (req, res) => {
   }
 };
 
+// Visitor Registration (cafeteria/utility website)
+// Requires id proof upload; no KYC needed. Sets userType = 'visitor'.
+userController.visitorRegister = async (req, res) => {
+  try {
+    const { userName, email, mobile, password, confirmPassword } = req.body;
+
+    if (!userName || !email || !mobile || !password || !confirmPassword) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "All fields are required",
+      );
+    }
+
+    if (!req.file) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "ID proof is required",
+      );
+    }
+
+    if (password !== confirmPassword) {
+      return res.error(httpStatus.BAD_REQUEST, false, "Passwords do not match");
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.error(
+        httpStatus.CONFLICT,
+        false,
+        "User with this email already exists",
+      );
+    }
+
+    const existingMobile = await User.findOne({ where: { mobile } });
+    if (existingMobile) {
+      return res.error(
+        httpStatus.CONFLICT,
+        false,
+        "User with this mobile number already exists",
+      );
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create({
+      username: userName,
+      email,
+      mobile,
+      password: hashedPassword,
+      userType: "visitor",
+      idProof: req.file.filename,
+    });
+
+    const userResponse = newUser.toJSON();
+    delete userResponse.password;
+
+    const token = jwt.sign(
+      { id: newUser.id, username: newUser.username, role: "user" },
+      process.env.APP_SUPER_SECRET_KEY,
+      { expiresIn: "24h" },
+    );
+
+    return res.success(httpStatus.CREATED, true, responseMessages.SAVE, {
+      user: userResponse,
+      token,
+    });
+  } catch (error) {
+    console.error("Visitor registration error:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Error registering visitor",
+      error,
+    );
+  }
+};
+
+// Visitor Login (cafeteria/utility website)
+// No KYC check required. Only visitors (userType = 'visitor') may use this endpoint.
+userController.visitorLogin = async (req, res) => {
+  try {
+    const { mobile, password } = req.body;
+
+    if (!mobile || !password) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "Mobile number and password are required",
+      );
+    }
+
+    const user = await User.findOne({ where: { mobile } });
+    if (!user) {
+      return res.error(
+        httpStatus.UNAUTHORIZED,
+        false,
+        "Invalid mobile number or password",
+      );
+    }
+
+    if (user.userType !== "visitor") {
+      return res.error(
+        httpStatus.FORBIDDEN,
+        false,
+        "This login is for visitor accounts only. Please use the member login.",
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.error(
+        httpStatus.UNAUTHORIZED,
+        false,
+        "Invalid mobile number or password",
+      );
+    }
+
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: "user" },
+      process.env.APP_SUPER_SECRET_KEY,
+      { expiresIn: "24h" },
+    );
+
+    return res.success(httpStatus.OK, true, "Login successful", {
+      user: userResponse,
+      token,
+    });
+  } catch (error) {
+    console.error("Visitor login error:", error);
+    return res.error(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      false,
+      "Error during login",
+      error,
+    );
+  }
+};
+
 module.exports = userController;

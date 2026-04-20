@@ -1,4 +1,6 @@
-const { Space, AvailableDate, Booking, teamMember, Utility } = require("../models");
+const { Space, AvailableDate, Booking, teamMember, Utility, UtilityOrder, User } = require("../models");
+const { Op } = require("sequelize");
+const { sendPushToTopic } = require("../utils/helper");
 const upload = require("../middlewares/upload.middleware");
 const path = require("path");
 const fs = require("fs");
@@ -672,6 +674,282 @@ inventoryController.deleteUtility = async (req, res, next) => {
   } catch (error) {
     console.error("Error deleting utility:", error);
     next(error);
+  }
+};
+
+// ─── Utility Orders ──────────────────────────────────────────────────────────
+
+// Place a utility order (visitor or member)
+inventoryController.placeUtilityOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    let {
+      orders,
+      specialInstructions,
+      utrNumber,
+      isPersonal,
+      isMonthlyPayment,
+    } = req.body;
+
+    // Parse orders if sent as a JSON string (form-data)
+    if (typeof orders === "string") {
+      try {
+        orders = JSON.parse(orders);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid JSON format for orders",
+        });
+      }
+    }
+
+    if (!orders || !Array.isArray(orders) || orders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Orders array is required",
+      });
+    }
+
+    // Resolve spaceId from active booking (visitors won't have one — that's fine)
+    const tzAdjusted = new Date(
+      Date.now() - new Date().getTimezoneOffset() * 60000,
+    );
+    const today = tzAdjusted.toISOString().slice(0, 10);
+
+    let currentSpaceId = req.body.spaceId ? Number(req.body.spaceId) : null;
+
+    if (!currentSpaceId) {
+      const activeBooking = await Booking.findOne({
+        where: {
+          userId,
+          status: "Confirm",
+          startDate: { [Op.lte]: today },
+          endDate: { [Op.gte]: today },
+        },
+        order: [["startDate", "DESC"]],
+      });
+
+      if (activeBooking) {
+        currentSpaceId = activeBooking.spaceId;
+      } else {
+        const latestBooking = await Booking.findOne({
+          where: { userId, status: "Confirm" },
+          order: [["endDate", "DESC"]],
+        });
+        currentSpaceId = latestBooking ? latestBooking.spaceId : null;
+      }
+    }
+
+    const isMonthly = isMonthlyPayment === "true" || isMonthlyPayment === true;
+    const isPersonalFlag = isPersonal === "true" || isPersonal === true;
+
+    // Require payment screenshot unless monthly payment
+    if (!isMonthly && !req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment screenshot is required for one-time payment orders",
+      });
+    }
+
+    let createdOrders = [];
+    let totalAmount = 0;
+
+    for (const item of orders) {
+      const { utilityId, quantity } = item;
+
+      if (!utilityId || !quantity) {
+        return res.status(400).json({
+          success: false,
+          message: "Each item must include utilityId and quantity",
+        });
+      }
+
+      const utility = await Utility.findByPk(utilityId);
+      if (!utility) {
+        return res.status(404).json({
+          success: false,
+          message: `Utility with id ${utilityId} not found`,
+        });
+      }
+
+      if (utility.availability !== "Available") {
+        return res.status(400).json({
+          success: false,
+          message: `Utility '${utility.name}' is not available`,
+        });
+      }
+
+      const price = parseFloat(utility.price);
+      const itemTotal = price * quantity;
+      totalAmount += itemTotal;
+
+      const order = await UtilityOrder.create({
+        userId,
+        utilityId,
+        quantity,
+        price,
+        totalAmount: itemTotal,
+        specialInstructions: specialInstructions || null,
+        utrNumber: utrNumber || null,
+        paymentScreenshot: req.file
+          ? `/uploads/utility-orders/${req.file.filename}`
+          : null,
+        status: "Pending",
+        spaceId: currentSpaceId,
+        isPersonal: isPersonalFlag,
+        isMonthlyPayment: isMonthly,
+        paid: "Pending",
+      });
+
+      createdOrders.push(order);
+    }
+
+    try {
+      await sendPushToTopic("utility_admin", {
+        notification: {
+          title: "New Utility Order",
+          body: `${createdOrders.length} item(s), total ₹${totalAmount}`,
+        },
+        data: { type: "utility_order", total: String(totalAmount) },
+      });
+    } catch (e) {
+      console.error("Utility push failed:", e);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Utility orders placed successfully",
+      totalAmount,
+      orders: createdOrders,
+    });
+  } catch (error) {
+    console.error("Error placing utility order:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to place utility order",
+      error: error.message,
+    });
+  }
+};
+
+// Get logged-in user's utility orders
+inventoryController.getUserUtilityOrders = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const orders = await UtilityOrder.findAll({
+      where: { userId },
+      include: [
+        {
+          model: Utility,
+          as: "utility",
+          attributes: ["id", "name", "category", "price"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User utility orders fetched successfully",
+      data: orders,
+    });
+  } catch (error) {
+    console.error("Error fetching user utility orders:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch utility orders",
+      error: error.message,
+    });
+  }
+};
+
+// Admin: get all utility orders
+inventoryController.getAllUtilityOrders = async (req, res) => {
+  try {
+    const orders = await UtilityOrder.findAll({
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        {
+          model: Utility,
+          as: "utility",
+          attributes: ["id", "name", "category", "price"],
+        },
+        {
+          model: Space,
+          as: "space",
+          attributes: ["roomNumber", "cabinNumber", "spaceName"],
+          required: false,
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "All utility orders fetched successfully",
+      data: orders,
+    });
+  } catch (error) {
+    console.error("Error fetching all utility orders:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch utility orders",
+      error: error.message,
+    });
+  }
+};
+
+// Admin: update utility order status
+inventoryController.updateUtilityOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, paid } = req.body;
+
+    const order = await UtilityOrder.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Utility order not found",
+      });
+    }
+
+    const validStatuses = ["Pending", "Confirmed", "Delivered", "Cancelled"];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    const validPaid = ["Yes", "No", "Pending"];
+    if (paid && !validPaid.includes(paid)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid paid value. Must be one of: ${validPaid.join(", ")}`,
+      });
+    }
+
+    if (status) order.status = status;
+    if (paid) order.paid = paid;
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Utility order updated successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error("Error updating utility order:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update utility order",
+      error: error.message,
+    });
   }
 };
 

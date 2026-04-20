@@ -31,6 +31,14 @@ const User = sequelize.define(
       type: DataTypes.ENUM("user", "admin"),
       defaultValue: "user",
     },
+    userType: {
+      type: DataTypes.ENUM("member", "visitor"),
+      defaultValue: "member",
+    },
+    idProof: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "users",

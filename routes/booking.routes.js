@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const bookingController = require("../controllers/booking.controller");
 const upload = require("../middlewares/upload.middleware");
-const authUserMiddleware = require("../middlewares/authUserMiddleware");
+const authMemberMiddleware = require("../middlewares/authMemberMiddleware");
 
-router.use(authUserMiddleware);
+router.use(authMemberMiddleware);
 
 // User books a space
 router.post("/book/space", bookingController.createBooking);
@@ -18,7 +18,7 @@ router.post(
 //kyc upload
 router.post(
   "/kyc",
-  authUserMiddleware,
+  authMemberMiddleware,
   upload("kyc").fields([
     { name: "idFront", maxCount: 1 },
     { name: "idBack", maxCount: 1 },

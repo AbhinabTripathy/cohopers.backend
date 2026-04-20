@@ -8,6 +8,14 @@ const upload = require("../middlewares/upload.middleware");
 router.post("/register", userController.register);
 router.post("/login", userController.login);
 
+// Visitor (cafeteria/utility website) routes
+router.post(
+  "/visitor/register",
+  upload("id-proofs").single("idProof"),
+  userController.visitorRegister,
+);
+router.post("/visitor/login", userController.visitorLogin);
+
 // Push notification endpoints
 router.post("/push/register", authMiddleware, userController.registerPushToken);
 router.post(
