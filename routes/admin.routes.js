@@ -35,6 +35,10 @@ router.get(
 router.get("/active-members", adminController.getAllActiveMembers);
 router.get("/past-members", adminController.getPastMembers);
 
+// Visitors section — all registered visitors with id proof, cabin/room, KYC
+router.get("/visitors", adminAuthMiddleware, adminController.getAllVisitors);
+router.get("/visitors/:id", adminAuthMiddleware, adminController.getVisitorById);
+
 // Verify KYC
 router.put("/kyc/:id/verify", adminAuthMiddleware, adminController.verifyKyc);
 

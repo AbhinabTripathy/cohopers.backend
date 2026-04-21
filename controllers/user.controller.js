@@ -53,12 +53,13 @@ userController.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
+    // Create new user — userType is always 'member' for this endpoint
     const newUser = await User.create({
       username: userName,
       email,
       mobile,
       password: hashedPassword,
+      userType: "member",
     });
 
     // Remove password from response
@@ -324,6 +325,39 @@ userController.logout = async (req, res) => {
 userController.getUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
+    const user = req.user;
+
+    // Visitors get a simplified profile (no space booking / KYC required)
+    if (user.userType === "visitor") {
+      const kyc = await Kyc.findOne({ where: { userId } });
+      const baseUrl = process.env.BASE_URL || "";
+
+      return res.status(200).json({
+        success: true,
+        message: "Visitor profile fetched successfully",
+        data: {
+          id: user.id,
+          name: user.username,
+          email: user.email,
+          mobile: user.mobile,
+          userType: user.userType,
+          cabinNumber: user.cabinNumber,
+          roomNumber: user.roomNumber,
+          idProof: user.idProof ? `${baseUrl}/uploads/id-proofs/${user.idProof}` : null,
+          kycStatus: kyc ? kyc.status : "not_submitted",
+          kycDetails: kyc
+            ? {
+                id: kyc.id,
+                documentType: kyc.type,
+                name: kyc.name,
+                email: kyc.email,
+                mobile: kyc.mobile,
+                status: kyc.status,
+              }
+            : null,
+        },
+      });
+    }
 
     //Find all bookings by this user
     const bookings = await Booking.findAll({
@@ -736,13 +770,38 @@ userController.getUserHistory = async (req, res) => {
 // Requires id proof upload; no KYC needed. Sets userType = 'visitor'.
 userController.visitorRegister = async (req, res) => {
   try {
-    const { userName, email, mobile, password, confirmPassword } = req.body;
+    const {
+      userName,
+      name,
+      username,
+      email,
+      mobile,
+      phone,
+      password,
+      confirmPassword,
+      confirm_password,
+      cabinNumber,
+      roomNumber,
+    } = req.body;
 
-    if (!userName || !email || !mobile || !password || !confirmPassword) {
+    // Accept common field name variants sent by different frontends
+    const resolvedName = userName || name || username;
+    const resolvedMobile = mobile || phone;
+    const resolvedConfirm = confirmPassword || confirm_password;
+
+    if (!resolvedName || !email || !resolvedMobile || !password || !resolvedConfirm) {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
         "All fields are required",
+      );
+    }
+
+    if (!cabinNumber || !roomNumber) {
+      return res.error(
+        httpStatus.BAD_REQUEST,
+        false,
+        "Cabin number and room number are required",
       );
     }
 
@@ -754,7 +813,7 @@ userController.visitorRegister = async (req, res) => {
       );
     }
 
-    if (password !== confirmPassword) {
+    if (password !== resolvedConfirm) {
       return res.error(httpStatus.BAD_REQUEST, false, "Passwords do not match");
     }
 
@@ -767,7 +826,7 @@ userController.visitorRegister = async (req, res) => {
       );
     }
 
-    const existingMobile = await User.findOne({ where: { mobile } });
+    const existingMobile = await User.findOne({ where: { mobile: resolvedMobile } });
     if (existingMobile) {
       return res.error(
         httpStatus.CONFLICT,
@@ -779,13 +838,16 @@ userController.visitorRegister = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // userType is always 'visitor' for this endpoint — ignore any client-supplied value
     const newUser = await User.create({
-      username: userName,
+      username: resolvedName,
       email,
-      mobile,
+      mobile: resolvedMobile,
       password: hashedPassword,
       userType: "visitor",
       idProof: req.file.filename,
+      cabinNumber: cabinNumber || null,
+      roomNumber: roomNumber || null,
     });
 
     const userResponse = newUser.toJSON();

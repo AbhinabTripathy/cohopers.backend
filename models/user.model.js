@@ -39,6 +39,14 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    cabinNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    roomNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "users",

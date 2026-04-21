@@ -211,6 +211,8 @@ cafeteriaController.placeOrder = async (req, res) => {
       success: true,
       message: "Orders placed successfully",
       totalAmount,
+      cabinNumber: req.user.cabinNumber || null,
+      roomNumber: req.user.roomNumber || null,
       orders: createdOrders,
     });
   } catch (error) {
@@ -256,7 +258,7 @@ cafeteriaController.getAllOrders = async (req, res) => {
         {
           model: User,
           as: "user",
-          attributes: ["id", "username", "email", "mobile"],
+          attributes: ["id", "username", "email", "mobile", "cabinNumber", "roomNumber", "userType"],
         },
         {
           model: Space,

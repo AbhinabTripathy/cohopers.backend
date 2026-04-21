@@ -1325,4 +1325,170 @@ adminController.testmail = async (req, res) => {
   }
 };
 
+// Get all registered visitors for admin panel
+adminController.getAllVisitors = async (req, res) => {
+  try {
+    const visitors = await User.findAll({
+      where: { userType: "visitor" },
+      attributes: [
+        "id",
+        "username",
+        "email",
+        "mobile",
+        "idProof",
+        "cabinNumber",
+        "roomNumber",
+        "createdAt",
+      ],
+      include: [
+        {
+          model: Kyc,
+          as: "kyc",
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+          required: false,
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const baseUrl = process.env.BASE_URL || "";
+    const formatted = visitors.map((v) => ({
+      id: v.id,
+      name: v.username,
+      email: v.email,
+      mobile: v.mobile,
+      idProof: v.idProof ? `${baseUrl}/uploads/id-proofs/${v.idProof}` : null,
+      cabinNumber: v.cabinNumber,
+      roomNumber: v.roomNumber,
+      registeredAt: v.createdAt,
+      kycStatus: v.kyc ? v.kyc.status : "not_submitted",
+      kycDetails: v.kyc
+        ? {
+            id: v.kyc.id,
+            documentType: v.kyc.type,
+            name: v.kyc.name,
+            email: v.kyc.email,
+            mobile: v.kyc.mobile,
+            gstNumber: v.kyc.gstNumber,
+            idFront: v.kyc.idFront,
+            idBack: v.kyc.idBack,
+            pan: v.kyc.pan,
+            photo: v.kyc.photo,
+            companyName: v.kyc.companyName,
+            certificateOfIncorporation: v.kyc.certificateOfIncorporation,
+            companyPAN: v.kyc.companyPAN,
+            directorName: v.kyc.directorName,
+            din: v.kyc.din,
+            directorPAN: v.kyc.directorPAN,
+            directorPhoto: v.kyc.directorPhoto,
+            directorIdFront: v.kyc.directorIdFront,
+            directorIdBack: v.kyc.directorIdBack,
+            directorPaymentProof: v.kyc.directorPaymentProof,
+            status: v.kyc.status,
+          }
+        : null,
+    }));
+
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      message: "Visitors fetched successfully",
+      data: formatted,
+    });
+  } catch (error) {
+    console.error("Error fetching visitors:", error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch visitors",
+      error: error.message,
+    });
+  }
+};
+
+// Get single visitor details by id
+adminController.getVisitorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const visitor = await User.findOne({
+      where: { id, userType: "visitor" },
+      attributes: [
+        "id",
+        "username",
+        "email",
+        "mobile",
+        "idProof",
+        "cabinNumber",
+        "roomNumber",
+        "createdAt",
+      ],
+      include: [
+        {
+          model: Kyc,
+          as: "kyc",
+          attributes: { exclude: ["createdAt", "updatedAt"] },
+          required: false,
+        },
+      ],
+    });
+
+    if (!visitor) {
+      return res.status(HttpStatus.NOT_FOUND).json({
+        success: false,
+        message: "Visitor not found",
+      });
+    }
+
+    const baseUrl = process.env.BASE_URL || "";
+    const payload = {
+      id: visitor.id,
+      name: visitor.username,
+      email: visitor.email,
+      mobile: visitor.mobile,
+      idProof: visitor.idProof ? `${baseUrl}/uploads/id-proofs/${visitor.idProof}` : null,
+      cabinNumber: visitor.cabinNumber,
+      roomNumber: visitor.roomNumber,
+      registeredAt: visitor.createdAt,
+      kycStatus: visitor.kyc ? visitor.kyc.status : "not_submitted",
+      kycDetails: visitor.kyc
+        ? {
+            id: visitor.kyc.id,
+            documentType: visitor.kyc.type,
+            name: visitor.kyc.name,
+            email: visitor.kyc.email,
+            mobile: visitor.kyc.mobile,
+            gstNumber: visitor.kyc.gstNumber,
+            idFront: visitor.kyc.idFront,
+            idBack: visitor.kyc.idBack,
+            pan: visitor.kyc.pan,
+            photo: visitor.kyc.photo,
+            companyName: visitor.kyc.companyName,
+            certificateOfIncorporation: visitor.kyc.certificateOfIncorporation,
+            companyPAN: visitor.kyc.companyPAN,
+            directorName: visitor.kyc.directorName,
+            din: visitor.kyc.din,
+            directorPAN: visitor.kyc.directorPAN,
+            directorPhoto: visitor.kyc.directorPhoto,
+            directorIdFront: visitor.kyc.directorIdFront,
+            directorIdBack: visitor.kyc.directorIdBack,
+            directorPaymentProof: visitor.kyc.directorPaymentProof,
+            status: visitor.kyc.status,
+          }
+        : null,
+    };
+
+    return res.status(HttpStatus.OK).json({
+      success: true,
+      message: "Visitor fetched successfully",
+      data: payload,
+    });
+  } catch (error) {
+    console.error("Error fetching visitor:", error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch visitor",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = adminController;

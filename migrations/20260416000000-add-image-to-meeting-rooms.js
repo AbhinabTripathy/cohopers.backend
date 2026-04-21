@@ -3,10 +3,13 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('meeting_rooms', 'image', {
-      type: Sequelize.STRING,
-      allowNull: true,
-    });
+    const tableDescription = await queryInterface.describeTable('meeting_rooms');
+    if (!tableDescription.image) {
+      await queryInterface.addColumn('meeting_rooms', 'image', {
+        type: Sequelize.STRING,
+        allowNull: true,
+      });
+    }
   },
 
   async down(queryInterface, Sequelize) {
