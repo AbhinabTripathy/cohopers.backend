@@ -1,4 +1,4 @@
-const { CafeteriaOrder, User, Booking, Space, Kyc } = require("../models");
+const { CafeteriaOrder, CafeteriaItem, User, Booking, Space, Kyc } = require("../models");
 const httpStatus = require("../enums/httpStatusCode.enum");
 const { Op } = require("sequelize");
 const { sendPushToTopic, sendPushToUserTopic } = require("../utils/helper");
@@ -405,6 +405,145 @@ cafeteriaController.updateOrderStatus = async (req, res) => {
       message: "Failed to update order status",
       error: error.message,
     });
+  }
+};
+
+// ─── Cafeteria Items CRUD ────────────────────────────────────────────────────
+
+// Add a new cafeteria item (admin only)
+cafeteriaController.addItem = async (req, res, next) => {
+  try {
+    const { category, item, price } = req.body;
+
+    if (!category || !item || price === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Category, item and price are required",
+      });
+    }
+
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Price must be a valid positive number",
+      });
+    }
+
+    const newItem = await CafeteriaItem.create({
+      category: category.trim(),
+      item: item.trim(),
+      price: parsedPrice,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Cafeteria item added successfully",
+      data: newItem,
+    });
+  } catch (error) {
+    console.error("Error adding cafeteria item:", error);
+    next(error);
+  }
+};
+
+// Get all cafeteria items
+cafeteriaController.getAllItems = async (req, res, next) => {
+  try {
+    const items = await CafeteriaItem.findAll({ order: [["category", "ASC"], ["item", "ASC"]] });
+    return res.status(200).json({
+      success: true,
+      message: "Cafeteria items retrieved successfully",
+      data: items,
+    });
+  } catch (error) {
+    console.error("Error fetching cafeteria items:", error);
+    next(error);
+  }
+};
+
+// Get a cafeteria item by id
+cafeteriaController.getItemById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const item = await CafeteriaItem.findByPk(id);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Cafeteria item not found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Cafeteria item retrieved successfully",
+      data: item,
+    });
+  } catch (error) {
+    console.error("Error fetching cafeteria item:", error);
+    next(error);
+  }
+};
+
+// Update a cafeteria item (admin only)
+cafeteriaController.updateItem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { category, item, price } = req.body;
+
+    const cafeteriaItem = await CafeteriaItem.findByPk(id);
+    if (!cafeteriaItem) {
+      return res.status(404).json({
+        success: false,
+        message: "Cafeteria item not found",
+      });
+    }
+
+    const updateData = {};
+    if (category !== undefined) updateData.category = category.trim();
+    if (item !== undefined) updateData.item = item.trim();
+    if (price !== undefined) {
+      const parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Price must be a valid positive number",
+        });
+      }
+      updateData.price = parsedPrice;
+    }
+
+    await cafeteriaItem.update(updateData);
+
+    return res.status(200).json({
+      success: true,
+      message: "Cafeteria item updated successfully",
+      data: cafeteriaItem,
+    });
+  } catch (error) {
+    console.error("Error updating cafeteria item:", error);
+    next(error);
+  }
+};
+
+// Delete a cafeteria item (admin only)
+cafeteriaController.deleteItem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const cafeteriaItem = await CafeteriaItem.findByPk(id);
+    if (!cafeteriaItem) {
+      return res.status(404).json({
+        success: false,
+        message: "Cafeteria item not found",
+      });
+    }
+    await cafeteriaItem.destroy();
+    return res.status(200).json({
+      success: true,
+      message: "Cafeteria item deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting cafeteria item:", error);
+    next(error);
   }
 };
 

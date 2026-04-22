@@ -7,6 +7,7 @@ const MeetingRoom = require("./meetingRoom.model");
 const roomBooking = require("./roomBooking.model");
 const teamMember = require("../models/teamMember.model");
 const CafeteriaOrder = require("./cafeteriaOrder.model");
+const CafeteriaItem = require("./cafeteriaItem.model");
 const FCMToken = require("./fcmToken.model");
 const Utility = require("./utility.model");
 const UtilityOrder = require("./utilityOrder.model");
@@ -135,6 +136,7 @@ module.exports = {
   roomBooking,
   teamMember,
   CafeteriaOrder,
+  CafeteriaItem,
   FCMToken,
   Utility,
   UtilityOrder,

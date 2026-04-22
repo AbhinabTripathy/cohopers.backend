@@ -8,9 +8,17 @@ const upload = require("../middlewares/upload.middleware");
 // Configure upload middleware for cafeteria
 const cafeteriaUpload = upload("cafeteria").single("paymentScreenshot");
 
-// Public routes
-router.get("/menu", cafeteriaController.getMenu);
+// ─── Cafeteria Items (Menu Management) ───────────────────────────────────────
+// Public: view items
+router.get("/items", cafeteriaController.getAllItems);
+router.get("/items/:id", cafeteriaController.getItemById);
 
+// Admin: manage items
+router.post("/items", adminAuthMiddleware, cafeteriaController.addItem);
+router.put("/items/:id", adminAuthMiddleware, cafeteriaController.updateItem);
+router.delete("/items/:id", adminAuthMiddleware, cafeteriaController.deleteItem);
+
+// ─── Cafeteria Orders ─────────────────────────────────────────────────────────
 // User routes - require user authentication
 router.use(authUserMiddleware);
 router.post("/order", cafeteriaUpload, cafeteriaController.placeOrder);
