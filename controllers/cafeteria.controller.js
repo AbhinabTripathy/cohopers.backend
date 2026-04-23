@@ -40,13 +40,14 @@ cafeteriaController.getMenu = async (req, res) => {
 cafeteriaController.placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
+    const body = req.body || {};
     let {
       orders,
       specialInstructions,
       utrNumber,
       isPersonal,
       isMonthlyPayment,
-    } = req.body;
+    } = body;
 
     // Parse orders if it's a string
     if (typeof orders === "string") {
@@ -79,7 +80,7 @@ cafeteriaController.placeOrder = async (req, res) => {
     );
     const today = tzAdjusted.toISOString().slice(0, 10);
 
-    let currentSpaceId = req.body.spaceId ? Number(req.body.spaceId) : null;
+    let currentSpaceId = body.spaceId ? Number(body.spaceId) : null;
 
     if (!currentSpaceId) {
       const activeBooking = await Booking.findOne({
@@ -109,63 +110,34 @@ cafeteriaController.placeOrder = async (req, res) => {
 
     // Process each order item
     for (const item of orders) {
-      const { orderType, itemName, quantity } = item;
+      const { category, itemName, quantity, price } = item;
 
-      // Validate fields
-      if (!orderType || !itemName || !quantity) {
+      if (!itemName || !quantity || price === undefined) {
         return res.status(400).json({
           success: false,
-          message: "Each item must include orderType, itemName, and quantity",
+          message: "Each item must include itemName, quantity, and price",
         });
       }
 
-      // Validate order type
-      if (!["Coffee", "Tea"].includes(orderType)) {
+      const parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({
           success: false,
-          message: `Invalid order type '${orderType}'. Must be 'Coffee' or 'Tea'`,
+          message: "Price must be a valid positive number",
         });
       }
 
-      // If not monthly payment, payment screenshot is required
-      if (!isMonthlyPayment && !req.file) {
-        return res.status(400).json({
-          success: false,
-          message: "Payment screenshot is required for one-time payment orders",
-        });
-      }
-
-      // Determine price
-      let price = 0;
-      if (orderType === "Coffee") {
-        if (validCoffeeItems.includes(itemName)) price = 30;
-        else {
-          return res.status(400).json({
-            success: false,
-            message: `Invalid coffee item name '${itemName}'`,
-          });
-        }
-      } else if (orderType === "Tea") {
-        if (validTeaItems.includes(itemName)) price = 20;
-        else {
-          return res.status(400).json({
-            success: false,
-            message: `Invalid tea item name '${itemName}'`,
-          });
-        }
-      }
-
-      const itemTotal = price * quantity;
+      const itemTotal = parsedPrice * quantity;
       totalAmount += itemTotal;
 
       // Create order record
       const order = await CafeteriaOrder.create({
         userId,
         spaceId: currentSpaceId,
-        orderType,
+        orderType: category || null,
         itemName,
         quantity,
-        price,
+        price: parsedPrice,
         totalAmount: itemTotal,
         specialInstructions,
         utrNumber,
@@ -173,11 +145,10 @@ cafeteriaController.placeOrder = async (req, res) => {
           ? `/uploads/cafeteria/${req.file.filename}`
           : null,
         status: "Pending",
-        isPersonal: isPersonal === "true" || isPersonal === true, // Treat as personal if explicitly true
-        isMonthlyPayment:
-          isMonthlyPayment === "true" || isMonthlyPayment === true, // Monthly payment flag
-        paid: "Pending", // Initially pending, admin will decide
-        kycId, // Include the KYC ID
+        isPersonal: isPersonal === "true" || isPersonal === true,
+        isMonthlyPayment: isMonthlyPayment === "true" || isMonthlyPayment === true,
+        paid: "Pending",
+        kycId,
       });
 
       createdOrders.push(order);

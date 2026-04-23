@@ -7,6 +7,10 @@ const upload = require("../middlewares/upload.middleware");
 
 // Configure upload middleware for cafeteria
 const cafeteriaUpload = upload("cafeteria").single("paymentScreenshot");
+const conditionalCafeteriaUpload = (req, res, next) => {
+  if (req.is("multipart/form-data")) return cafeteriaUpload(req, res, next);
+  next();
+};
 
 // ─── Cafeteria Items (Menu Management) ───────────────────────────────────────
 // Public: view items
@@ -20,9 +24,8 @@ router.delete("/items/:id", adminAuthMiddleware, cafeteriaController.deleteItem)
 
 // ─── Cafeteria Orders ─────────────────────────────────────────────────────────
 // User routes - require user authentication
-router.use(authUserMiddleware);
-router.post("/order", cafeteriaUpload, cafeteriaController.placeOrder);
-router.get("/orders", cafeteriaController.getUserOrders);
+router.post("/order", authUserMiddleware, conditionalCafeteriaUpload, cafeteriaController.placeOrder);
+router.get("/orders", authUserMiddleware, cafeteriaController.getUserOrders);
 
 // Admin routes - require admin authentication
 router.get(

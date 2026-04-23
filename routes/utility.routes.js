@@ -15,10 +15,18 @@ router.put("/:id", authAdminMiddleware, inventoryController.updateUtility);
 router.delete("/:id", authAdminMiddleware, inventoryController.deleteUtility);
 
 // User/Visitor: place and view utility orders
+const utilityUpload = upload("utility-orders").fields([
+  { name: "paymentScreenshot", maxCount: 1 },
+  { name: "printFile", maxCount: 1 },
+]);
+const conditionalUtilityUpload = (req, res, next) => {
+  if (req.is("multipart/form-data")) return utilityUpload(req, res, next);
+  next();
+};
 router.post(
   "/order/place",
   authUserMiddleware,
-  upload("utility-orders").single("paymentScreenshot"),
+  conditionalUtilityUpload,
   inventoryController.placeUtilityOrder,
 );
 router.get("/order/my-orders", authUserMiddleware, inventoryController.getUserUtilityOrders);

@@ -19,8 +19,8 @@ const CafeteriaOrder = sequelize.define(
       },
     },
     orderType: {
-      type: DataTypes.ENUM("Coffee", "Tea"),
-      allowNull: false,
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     itemName: {
       type: DataTypes.STRING,

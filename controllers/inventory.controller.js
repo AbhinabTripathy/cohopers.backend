@@ -743,14 +743,6 @@ inventoryController.placeUtilityOrder = async (req, res) => {
     const isMonthly = isMonthlyPayment === "true" || isMonthlyPayment === true;
     const isPersonalFlag = isPersonal === "true" || isPersonal === true;
 
-    // Require payment screenshot unless monthly payment
-    if (!isMonthly && !req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment screenshot is required for one-time payment orders",
-      });
-    }
-
     let createdOrders = [];
     let totalAmount = 0;
 
@@ -791,9 +783,12 @@ inventoryController.placeUtilityOrder = async (req, res) => {
         totalAmount: itemTotal,
         specialInstructions: specialInstructions || null,
         utrNumber: utrNumber || null,
-        paymentScreenshot: req.file
-          ? `/uploads/utility-orders/${req.file.filename}`
-          : null,
+        paymentScreenshot:
+          req.files && req.files["paymentScreenshot"]
+            ? `/uploads/utility-orders/${req.files["paymentScreenshot"][0].filename}`
+            : req.file
+            ? `/uploads/utility-orders/${req.file.filename}`
+            : null,
         status: "Pending",
         spaceId: currentSpaceId,
         isPersonal: isPersonalFlag,
