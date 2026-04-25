@@ -77,6 +77,32 @@ const UtilityOrder = sequelize.define(
       allowNull: false,
       defaultValue: "Pending",
     },
+    // Print-service specific fields (null for non-print utilities)
+    printFile: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    printType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    colorMode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    paperSize: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    orientation: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    doubleSided: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
   },
   {
     tableName: "utility_orders",

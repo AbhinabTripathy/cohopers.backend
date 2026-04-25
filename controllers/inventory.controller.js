@@ -746,8 +746,29 @@ inventoryController.placeUtilityOrder = async (req, res) => {
     let createdOrders = [];
     let totalAmount = 0;
 
+    // Resolve uploaded files once (shared across all items in the batch)
+    const paymentScreenshotPath =
+      req.files && req.files["paymentScreenshot"]
+        ? `/uploads/utility-orders/${req.files["paymentScreenshot"][0].filename}`
+        : req.file
+        ? `/uploads/utility-orders/${req.file.filename}`
+        : null;
+
+    const printFilePath =
+      req.files && req.files["printFile"]
+        ? `/uploads/utility-orders/${req.files["printFile"][0].filename}`
+        : null;
+
     for (const item of orders) {
-      const { utilityId, quantity } = item;
+      const {
+        utilityId,
+        quantity,
+        printType,
+        colorMode,
+        paperSize,
+        orientation,
+        doubleSided,
+      } = item;
 
       if (!utilityId || !quantity) {
         return res.status(400).json({
@@ -775,6 +796,11 @@ inventoryController.placeUtilityOrder = async (req, res) => {
       const itemTotal = price * quantity;
       totalAmount += itemTotal;
 
+      // Determine if this is a print-type utility by category
+      const isPrint =
+        utility.category &&
+        utility.category.toLowerCase().includes("print");
+
       const order = await UtilityOrder.create({
         userId,
         utilityId,
@@ -783,17 +809,21 @@ inventoryController.placeUtilityOrder = async (req, res) => {
         totalAmount: itemTotal,
         specialInstructions: specialInstructions || null,
         utrNumber: utrNumber || null,
-        paymentScreenshot:
-          req.files && req.files["paymentScreenshot"]
-            ? `/uploads/utility-orders/${req.files["paymentScreenshot"][0].filename}`
-            : req.file
-            ? `/uploads/utility-orders/${req.file.filename}`
-            : null,
+        paymentScreenshot: paymentScreenshotPath,
         status: "Pending",
         spaceId: currentSpaceId,
         isPersonal: isPersonalFlag,
         isMonthlyPayment: isMonthly,
         paid: "Pending",
+        // Print-specific fields — only populated for printing utilities
+        printFile: isPrint ? printFilePath : null,
+        printType: isPrint ? (printType || null) : null,
+        colorMode: isPrint ? (colorMode || null) : null,
+        paperSize: isPrint ? (paperSize || null) : null,
+        orientation: isPrint ? (orientation || null) : null,
+        doubleSided: isPrint
+          ? doubleSided === true || doubleSided === "true"
+          : null,
       });
 
       createdOrders.push(order);
