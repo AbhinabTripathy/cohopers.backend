@@ -108,15 +108,38 @@ cafeteriaController.placeOrder = async (req, res) => {
     const kycRecord = await Kyc.findOne({ where: { userId } });
     const kycId = kycRecord ? kycRecord.id : null;
 
+    // Menu price lookup map
+    const menuPrices = {
+      "Cappuccino": 30,
+      "Black Coffee": 30,
+      "Espresso": 30,
+      "Lemon Tea": 20,
+      "Masala/Cardamom Tea": 20,
+      "Green Tea": 20,
+    };
+
     // Process each order item
     for (const item of orders) {
-      const { category, itemName, quantity, price } = item;
+      const { category, orderType, itemName, quantity } = item;
+      let { price } = item;
 
-      if (!itemName || !quantity || price === undefined) {
+      if (!itemName || !quantity) {
         return res.status(400).json({
           success: false,
-          message: "Each item must include itemName, quantity, and price",
+          message: "Each item must include itemName and quantity",
         });
+      }
+
+      // Auto-lookup price from menu if not provided
+      if (price === undefined || price === null || price === "") {
+        const lookedUp = menuPrices[itemName];
+        if (lookedUp === undefined) {
+          return res.status(400).json({
+            success: false,
+            message: `Price not found for item "${itemName}". Please provide a price.`,
+          });
+        }
+        price = lookedUp;
       }
 
       const parsedPrice = parseFloat(price);
@@ -134,7 +157,7 @@ cafeteriaController.placeOrder = async (req, res) => {
       const order = await CafeteriaOrder.create({
         userId,
         spaceId: currentSpaceId,
-        orderType: category || null,
+        orderType: orderType || category || null,
         itemName,
         quantity,
         price: parsedPrice,

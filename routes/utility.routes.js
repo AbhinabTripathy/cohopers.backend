@@ -33,6 +33,7 @@ router.get("/order/my-orders", authUserMiddleware, inventoryController.getUserUt
 
 // Admin: manage utility orders
 router.get("/admin/orders", authAdminMiddleware, inventoryController.getAllUtilityOrders);
+router.get("/admin/orders/:id", authAdminMiddleware, inventoryController.getUtilityOrderById);
 router.put("/admin/orders/:id", authAdminMiddleware, inventoryController.updateUtilityOrderStatus);
 
 module.exports = router;

@@ -792,14 +792,13 @@ inventoryController.placeUtilityOrder = async (req, res) => {
         });
       }
 
-      const price = parseFloat(utility.price);
-      const itemTotal = price * quantity;
-      totalAmount += itemTotal;
-
-      // Determine if this is a print-type utility by category
       const isPrint =
         utility.category &&
         utility.category.toLowerCase().includes("print");
+
+      const price = parseFloat(utility.price);
+      const itemTotal = price * quantity;
+      totalAmount += itemTotal;
 
       const order = await UtilityOrder.create({
         userId,
@@ -924,6 +923,54 @@ inventoryController.getAllUtilityOrders = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch utility orders",
+      error: error.message,
+    });
+  }
+};
+
+// Admin: get single utility order by ID
+inventoryController.getUtilityOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await UtilityOrder.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email", "mobile"],
+        },
+        {
+          model: Utility,
+          as: "utility",
+          attributes: ["id", "name", "category", "price"],
+        },
+        {
+          model: Space,
+          as: "space",
+          attributes: ["roomNumber", "cabinNumber", "spaceName"],
+          required: false,
+        },
+      ],
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Utility order not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Utility order fetched successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error("Error fetching utility order by ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch utility order",
       error: error.message,
     });
   }
