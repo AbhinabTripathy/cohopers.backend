@@ -524,10 +524,16 @@ adminController.getDashboardData = async (req, res) => {
 // Get all active members
 adminController.getAllActiveMembers = async (req, res) => {
   try {
-    // Find all confirmed bookings with their user and space
+    const { Op } = require("sequelize");
+    const currentDate = new Date();
+
+    // Find all confirmed bookings where endDate has not yet passed
     const activeBookings = await Booking.findAll({
       where: {
         status: "Confirm",
+        endDate: {
+          [Op.gte]: currentDate,
+        },
       },
       include: [
         {
@@ -632,13 +638,26 @@ adminController.getPastMembers = async (req, res) => {
     const { Op } = require("sequelize");
     const currentDate = new Date();
 
-    // Find all confirmed bookings whose end date has passed
+    // Find all userIds who currently have an active booking (endDate >= today)
+    const activeBookingUsers = await Booking.findAll({
+      where: {
+        status: { [Op.in]: ["Confirm", "Notice Given"] },
+        endDate: { [Op.gte]: currentDate },
+      },
+      attributes: ["userId"],
+    });
+    const activeUserIds = activeBookingUsers.map((b) => b.userId);
+
+    // Find past bookings for users who have NOT restarted a new booking
     const pastBookings = await Booking.findAll({
       where: {
-        status: "Confirm",
+        status: { [Op.in]: ["Confirm", "Notice Given"] },
         endDate: {
-          [Op.lt]: currentDate, // endDate less than current date
+          [Op.lt]: currentDate,
         },
+        ...(activeUserIds.length > 0 && {
+          userId: { [Op.notIn]: activeUserIds },
+        }),
       },
       include: [
         {
