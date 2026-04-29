@@ -573,8 +573,12 @@ meetingRoomController.bookRoom = async (req, res) => {
     const userPhone = req.user.mobile;
     const userId = req.user.id;
 
+    // Determine memberType from the authenticated user's userType in DB,
+    // ignoring any client-supplied value to prevent manipulation
+    const resolvedMemberType = req.user.userType === "member" ? "Member" : (memberType || "Non-Member");
+
     // Check for required fields
-    if (!capacityType || !bookingDate || !bookingType || !memberType) {
+    if (!capacityType || !bookingDate || !bookingType) {
       return res.error(
         httpStatus.BAD_REQUEST,
         false,
@@ -594,7 +598,7 @@ meetingRoomController.bookRoom = async (req, res) => {
     // }
 
     // Non-members must provide payment screenshot
-    if (memberType !== "Member") {
+    if (resolvedMemberType !== "Member") {
       if (!req.files || !req.files.paymentScreenshot) {
         return res.error(
           httpStatus.BAD_REQUEST,
@@ -630,11 +634,11 @@ meetingRoomController.bookRoom = async (req, res) => {
     let basePrice;
     if (bookingType === "Hourly") {
       basePrice = parseInt(
-        memberType === "Member" ? room.memberHourlyRate : room.hourlyRate,
+        resolvedMemberType === "Member" ? room.memberHourlyRate : room.hourlyRate,
       );
     } else {
       basePrice = parseInt(
-        memberType === "Member" ? room.memberDayRate : room.dayRate,
+        resolvedMemberType === "Member" ? room.memberDayRate : room.dayRate,
       );
     }
 
@@ -714,15 +718,15 @@ meetingRoomController.bookRoom = async (req, res) => {
       timeSlots: bookingType === "Hourly" ? timeSlots : null,
       duration: bookingType === "Hourly" ? duration : null,
       bookingType,
-      memberType,
+      memberType: resolvedMemberType,
       totalAmount: parseFloat(totalAmount.toFixed(2)),
-      status: memberType === "Member" ? "Confirm" : "pending", // Auto-confirm for members
+      status: resolvedMemberType === "Member" ? "Confirm" : "pending", // Auto-confirm for members
       notes,
       gst: gst || null,
     };
 
     // Add file paths for non-members
-    if (memberType !== "Member") {
+    if (resolvedMemberType !== "Member") {
       if (req.files.paymentScreenshot) {
         bookingData.paymentScreenshot = `/uploads/meeting-rooms/${req.files.paymentScreenshot[0].filename}`;
       }
