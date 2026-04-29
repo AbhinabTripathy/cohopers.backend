@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/user.controller");
 const adminController = require("../controllers/admin.controller");
+const bookingController = require("../controllers/booking.controller");
 const authMiddleware = require("../middlewares/authUserMiddleware");
 const upload = require("../middlewares/upload.middleware");
 
@@ -15,6 +16,26 @@ router.post(
   userController.visitorRegister,
 );
 router.post("/visitor/login", userController.visitorLogin);
+
+// Visitor KYC submission
+router.post(
+  "/visitor/kyc",
+  authMiddleware,
+  upload("kyc").fields([
+    { name: "idFront", maxCount: 1 },
+    { name: "idBack", maxCount: 1 },
+    { name: "pan", maxCount: 1 },
+    { name: "photo", maxCount: 1 },
+    { name: "certificateOfIncorporation", maxCount: 1 },
+    { name: "companyPAN", maxCount: 1 },
+    { name: "directorPAN", maxCount: 1 },
+    { name: "directorPhoto", maxCount: 1 },
+    { name: "directorIdFront", maxCount: 1 },
+    { name: "directorIdBack", maxCount: 1 },
+    { name: "directorPaymentProof", maxCount: 1 },
+  ]),
+  bookingController.submitKyc,
+);
 
 // Push notification endpoints
 router.post("/push/register", authMiddleware, userController.registerPushToken);

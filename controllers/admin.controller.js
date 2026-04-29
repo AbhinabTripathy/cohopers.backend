@@ -769,6 +769,12 @@ adminController.verifyKyc = async (req, res) => {
     //  Get user details
     const user = await User.findByPk(kyc.userId);
 
+    // If a visitor's KYC is approved, upgrade them to member so they can book spaces/meeting rooms
+    if (user && status === "Approve" && user.userType === "visitor") {
+      user.userType = "member";
+      await user.save();
+    }
+
     //EMAIL and PUSH ONLY IF USER EXISTS
     if (user) {
       const emailHtml = emailTemplate({
@@ -1190,6 +1196,13 @@ adminController.registerAdminPushToken = async (req, res) => {
       },
     });
   } catch (err) {
+    // If only Firebase is not configured, still return success since token is saved in DB
+    if (err.message && err.message.includes("Firebase credentials not configured")) {
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: "Push token registered (push notifications unavailable — Firebase not configured)",
+      });
+    }
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Failed to register admin token",
@@ -1236,6 +1249,12 @@ adminController.subscribePushTopic = async (req, res) => {
       .status(HttpStatus.OK)
       .json({ success: true, message: `Subscribed to ${topic}` });
   } catch (err) {
+    if (err.message && err.message.includes("Firebase credentials not configured")) {
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: `Subscribed to ${topic} (push notifications unavailable — Firebase not configured)`,
+      });
+    }
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Subscribe failed",

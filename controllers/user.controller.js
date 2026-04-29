@@ -123,44 +123,39 @@ userController.login = async (req, res) => {
       );
     }
 
-    // Find KYC by userId (approval is required to login)
+    // Find latest KYC for this user (if any)
     const userKyc = await Kyc.findOne({
       where: { userId: user.id },
       order: [["createdAt", "DESC"]],
     });
 
-    if (!userKyc || userKyc.status !== "Approve") {
-      return res.error(
-        httpStatus.FORBIDDEN,
-        false,
-        "KYC pending or not approved. Please complete KYC or wait for admin approval.",
-      );
+    const kycApproved = userKyc && userKyc.status === "Approve";
+
+    // Check occupied space (confirmed booking) — only relevant if KYC is approved
+    let occupiedSpace = null;
+    if (kycApproved) {
+      const userBooking = await Booking.findOne({
+        where: { userId: user.id, status: "Confirm" },
+        include: [
+          {
+            model: require("../models/space.model"),
+            as: "space",
+            attributes: ["id", "spaceName", "roomNumber", "cabinNumber"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+
+      occupiedSpace =
+        userBooking && userBooking.space
+          ? {
+              id: userBooking.space.id,
+              name: userBooking.space.spaceName,
+              roomNumber: userBooking.space.roomNumber,
+              cabinNumber: userBooking.space.cabinNumber,
+            }
+          : null;
     }
-
-    // Check occupied space (confirmed booking)
-    const userBooking = await Booking.findOne({
-      where: { userId: user.id, status: "Confirm" },
-      include: [
-        {
-          model: require("../models/space.model"),
-          as: "space",
-          attributes: ["id", "spaceName", "roomNumber", "cabinNumber"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-
-    const occupiedSpace =
-      userBooking && userBooking.space
-        ? {
-            id: userBooking.space.id,
-            name: userBooking.space.spaceName,
-            roomNumber: userBooking.space.roomNumber,
-            cabinNumber: userBooking.space.cabinNumber,
-          }
-        : null;
-
-    const memberType = occupiedSpace ? "member" : "non-member";
 
     const userResponse = user.toJSON();
     delete userResponse.password;
@@ -174,8 +169,18 @@ userController.login = async (req, res) => {
     return res.success(httpStatus.OK, true, "Login successful", {
       user: userResponse,
       token,
-      memberType,
-      kycRequired: false,
+      kycStatus: userKyc ? userKyc.status : "not_submitted",
+      kyc: kycApproved
+        ? {
+            name: userKyc.name,
+            email: userKyc.email,
+            mobile: userKyc.mobile,
+            type: userKyc.type,
+            cabinNumber: occupiedSpace ? occupiedSpace.cabinNumber : null,
+            roomNumber: occupiedSpace ? occupiedSpace.roomNumber : null,
+            spaceName: occupiedSpace ? occupiedSpace.name : null,
+          }
+        : null,
     });
   } catch (error) {
     console.error("User login error:", error);
@@ -511,7 +516,11 @@ userController.registerPushToken = async (req, res) => {
       role: "user",
     });
     const topic = `user_${req.user.id}`;
-    await subscribeTokenToTopic(token, topic);
+    try {
+      await subscribeTokenToTopic(token, topic);
+    } catch (firebaseErr) {
+      console.warn("Push subscription skipped:", firebaseErr.message);
+    }
     return res.success(
       httpStatus.OK,
       true,
@@ -562,6 +571,9 @@ userController.subscribePushTopic = async (req, res) => {
     await subscribeTokenToTopic(token, topic);
     return res.success(httpStatus.OK, true, `Subscribed to ${topic}`);
   } catch (error) {
+    if (error.message && error.message.includes("Firebase credentials not configured")) {
+      return res.success(httpStatus.OK, true, `Subscribed to ${topic} (push notifications unavailable)`);
+    }
     return res.error(
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
@@ -874,8 +886,7 @@ userController.visitorRegister = async (req, res) => {
   }
 };
 
-// Visitor Login (cafeteria/utility website)
-// No KYC check required. Only visitors (userType = 'visitor') may use this endpoint.
+// Login for cafeteria/utility website — accepts both visitors and members
 userController.visitorLogin = async (req, res) => {
   try {
     const { mobile, password } = req.body;
@@ -897,14 +908,6 @@ userController.visitorLogin = async (req, res) => {
       );
     }
 
-    if (user.userType !== "visitor") {
-      return res.error(
-        httpStatus.FORBIDDEN,
-        false,
-        "This login is for visitor accounts only. Please use the member login.",
-      );
-    }
-
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.error(
@@ -912,6 +915,40 @@ userController.visitorLogin = async (req, res) => {
         false,
         "Invalid mobile number or password",
       );
+    }
+
+    // Find latest KYC for this user (if any)
+    const userKyc = await Kyc.findOne({
+      where: { userId: user.id },
+      order: [["createdAt", "DESC"]],
+    });
+
+    const kycApproved = userKyc && userKyc.status === "Approve";
+
+    // Fetch occupied space only if KYC is approved
+    let occupiedSpace = null;
+    if (kycApproved) {
+      const userBooking = await Booking.findOne({
+        where: { userId: user.id, status: "Confirm" },
+        include: [
+          {
+            model: require("../models/space.model"),
+            as: "space",
+            attributes: ["id", "spaceName", "roomNumber", "cabinNumber"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+
+      occupiedSpace =
+        userBooking && userBooking.space
+          ? {
+              id: userBooking.space.id,
+              name: userBooking.space.spaceName,
+              roomNumber: userBooking.space.roomNumber,
+              cabinNumber: userBooking.space.cabinNumber,
+            }
+          : null;
     }
 
     const userResponse = user.toJSON();
@@ -926,9 +963,21 @@ userController.visitorLogin = async (req, res) => {
     return res.success(httpStatus.OK, true, "Login successful", {
       user: userResponse,
       token,
+      kycStatus: userKyc ? userKyc.status : "not_submitted",
+      kyc: kycApproved
+        ? {
+            name: userKyc.name,
+            email: userKyc.email,
+            mobile: userKyc.mobile,
+            type: userKyc.type,
+            cabinNumber: occupiedSpace ? occupiedSpace.cabinNumber : null,
+            roomNumber: occupiedSpace ? occupiedSpace.roomNumber : null,
+            spaceName: occupiedSpace ? occupiedSpace.name : null,
+          }
+        : null,
     });
   } catch (error) {
-    console.error("Visitor login error:", error);
+    console.error("Login error:", error);
     return res.error(
       httpStatus.INTERNAL_SERVER_ERROR,
       false,
