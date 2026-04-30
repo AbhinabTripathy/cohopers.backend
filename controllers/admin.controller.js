@@ -396,9 +396,48 @@ adminController.verifySpaceBooking = async (req, res) => {
 adminController.getDashboardData = async (req, res) => {
   try {
     const { Op } = require("sequelize");
+    const sequelize = require("../config/db");
 
     // Get total users (excluding admin if needed)
     const totalUsers = await User.count();
+
+    // Get active users (users with confirmed bookings where endDate >= today + all registered visitors)
+    const currentDate = new Date();
+    
+    // Users with confirmed active bookings
+    const activeBookings = await Booking.findAll({
+      where: {
+        status: "Confirm",
+        endDate: {
+          [Op.gte]: currentDate,
+        },
+      },
+      attributes: ["userId"],
+      raw: true,
+    });
+    const activeBookingUserIds = new Set(activeBookings.map(b => b.userId));
+    
+    // All registered visitors
+    const registeredVisitors = await User.findAll({
+      where: {
+        userType: "visitor",
+      },
+      attributes: ["id"],
+      raw: true,
+    });
+    const visitorIds = new Set(registeredVisitors.map(v => v.id));
+    
+    // Combine both - active users = users with active bookings + all registered visitors
+    const allActiveUserIds = new Set([...activeBookingUserIds, ...visitorIds]);
+    const activeUsersCount = allActiveUserIds.size;
+
+    // Get available spaces count
+    const availableSpaces = await Space.count({
+      where: {
+        availability: "Available",
+        isActive: true,
+      },
+    });
 
     // Get total space bookings
     const totalSpaceBookings = await Booking.count();
@@ -491,6 +530,8 @@ adminController.getDashboardData = async (req, res) => {
       success: true,
       data: {
         totalUsers,
+        activeUsers: activeUsersCount,
+        availableSpaces,
         totalSpaceBookings,
         totalMeetingRoomBookings,
         totalEarnings: spaceEarnings + meetingRoomEarnings,
