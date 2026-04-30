@@ -481,7 +481,6 @@ adminController.getDashboardData = async (req, res) => {
     });
 
     // Calculate monthly earnings (current month)
-    const currentDate = new Date();
     const firstDayOfMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
