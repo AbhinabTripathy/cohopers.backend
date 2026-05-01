@@ -3,22 +3,23 @@ const router = express.Router();
 const bookingController = require("../controllers/booking.controller");
 const upload = require("../middlewares/upload.middleware");
 const authMemberMiddleware = require("../middlewares/authMemberMiddleware");
+const authUserMiddleware = require("../middlewares/authUserMiddleware");
 
-router.use(authMemberMiddleware);
+// User books a space (members only)
+router.post("/book/space", authMemberMiddleware, bookingController.createBooking);
 
-// User books a space
-router.post("/book/space", bookingController.createBooking);
-
-// Upload payment screenshot
+// Upload payment screenshot (members only)
 router.post(
   "/:id/payment",
+  authMemberMiddleware,
   upload("payment-screenshots").single("paymentScreenshot"),
   bookingController.uploadPayment,
 );
-//kyc upload
+
+// KYC upload (both members and visitors)
 router.post(
   "/kyc",
-  authMemberMiddleware,
+  authUserMiddleware,
   upload("kyc").fields([
     { name: "idFront", maxCount: 1 },
     { name: "idBack", maxCount: 1 },
