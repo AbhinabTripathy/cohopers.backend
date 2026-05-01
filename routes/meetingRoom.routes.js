@@ -2,6 +2,7 @@ const express = require("express");
 const meetingRoomController = require("../controllers/meetingRoom.controller");
 const authMiddleware = require("../middlewares/authUserMiddleware");
 const authMemberMiddleware = require("../middlewares/authMemberMiddleware");
+const authVisitorWithKycMiddleware = require("../middlewares/authVisitorWithKycMiddleware");
 const authAdminMiddleware = require("../middlewares/authAdminMiddleware");
 const fileUpload = require("../middlewares/upload.middleware");
 
@@ -35,7 +36,7 @@ router.delete(
 );
 router.post(
   "/book",
-  authMemberMiddleware,
+  authVisitorWithKycMiddleware,
   fileUpload("meeting-rooms").fields([
     { name: "paymentScreenshot", maxCount: 1 },
     { name: "idProof", maxCount: 1 },
