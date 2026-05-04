@@ -364,22 +364,6 @@ userController.getUserProfile = async (req, res) => {
       });
     }
 
-    //Find all bookings by this user
-    const bookings = await Booking.findAll({
-      where: { userId },
-      order: [["createdAt", "DESC"]],
-    });
-
-    if (!bookings || bookings.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No bookings found for this user.",
-      });
-    }
-
-    // Get all booking
-    const bookingIds = bookings.map((b) => b.id);
-
     //Find KYC by user
     const kyc = await Kyc.findOne({ where: { userId } });
 
@@ -390,10 +374,21 @@ userController.getUserProfile = async (req, res) => {
       });
     }
 
-    //Count team members
-    const teamCount = await teamMember.count({
-      where: { bookingId: bookingIds },
+    //Find all bookings by this user
+    const bookings = await Booking.findAll({
+      where: { userId },
+      order: [["createdAt", "DESC"]],
     });
+
+    // Get all booking IDs (will be empty if no bookings)
+    const bookingIds = bookings && bookings.length > 0 ? bookings.map((b) => b.id) : [];
+
+    //Count team members
+    const teamCount = bookingIds.length > 0 
+      ? await teamMember.count({
+          where: { bookingId: bookingIds },
+        })
+      : 0;
 
     // response
     const profileData = {
