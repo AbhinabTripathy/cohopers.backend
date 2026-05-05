@@ -7,6 +7,9 @@ const {
   Kyc,
   teamMember,
   FCMToken,
+  CafeteriaOrder,
+  UtilityOrder,
+  Utility,
 } = require("../models");
 const adminController = require("./admin.controller");
 const httpStatus = require("../enums/httpStatusCode.enum");
@@ -15,6 +18,7 @@ const {
   subscribeTokenToTopic,
   unsubscribeTokenFromTopic,
 } = require("../utils/helper");
+const { Op } = require("sequelize");
 
 const userController = {};
 // User Registration
@@ -979,6 +983,155 @@ userController.visitorLogin = async (req, res) => {
       "Error during login",
       error,
     );
+  }
+};
+
+// Get combined order history (cafeteria + utilities)
+userController.getOrderHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 15, type = "all", status, fromDate, toDate } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let allOrders = [];
+    let totalCount = 0;
+
+    // Build date filter if provided
+    const dateFilter = {};
+    if (fromDate || toDate) {
+      if (fromDate) {
+        dateFilter[Op.gte] = new Date(fromDate);
+      }
+      if (toDate) {
+        dateFilter[Op.lte] = new Date(toDate);
+      }
+    }
+
+    // Fetch cafeteria orders
+    if (type === "all" || type === "cafeteria") {
+      const cafeteriaWhere = { userId };
+      if (status) cafeteriaWhere.status = status;
+      if (Object.keys(dateFilter).length > 0) cafeteriaWhere.createdAt = dateFilter;
+
+      const cafeteriaOrders = await CafeteriaOrder.findAll({
+        where: cafeteriaWhere,
+        include: [
+          {
+            model: Space,
+            as: "space",
+            attributes: ["id", "spaceName", "cabinNumber", "roomNumber"],
+          },
+        ],
+        attributes: [
+          "id",
+          "itemName",
+          "quantity",
+          "price",
+          "totalAmount",
+          "status",
+          "paid",
+          "specialInstructions",
+          "createdAt",
+        ],
+      });
+
+      const cafeteriaFormatted = cafeteriaOrders.map((order) => ({
+        id: order.id,
+        type: "cafeteria",
+        itemName: order.itemName,
+        quantity: order.quantity,
+        unitPrice: order.price,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        paymentStatus: order.paid,
+        specialInstructions: order.specialInstructions,
+        location: order.space
+          ? `${order.space.spaceName} (${order.space.cabinNumber || order.space.roomNumber})`
+          : null,
+        createdAt: order.createdAt,
+      }));
+
+      allOrders.push(...cafeteriaFormatted);
+    }
+
+    // Fetch utility orders
+    if (type === "all" || type === "utility") {
+      const utilityWhere = { userId };
+      if (status) utilityWhere.status = status;
+      if (Object.keys(dateFilter).length > 0) utilityWhere.createdAt = dateFilter;
+
+      const utilityOrders = await UtilityOrder.findAll({
+        where: utilityWhere,
+        include: [
+          {
+            model: Utility,
+            as: "utility",
+            attributes: ["id", "name", "category", "price"],
+          },
+        ],
+        attributes: [
+          "id",
+          "quantity",
+          "price",
+          "totalAmount",
+          "status",
+          "paid",
+          "specialInstructions",
+          "createdAt",
+        ],
+      });
+
+      const utilityFormatted = utilityOrders.map((order) => ({
+        id: order.id,
+        type: "utility",
+        itemName: order.utility?.name || "Unknown",
+        category: order.utility?.category || null,
+        quantity: order.quantity,
+        unitPrice: order.price,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        paymentStatus: order.paid,
+        specialInstructions: order.specialInstructions,
+        createdAt: order.createdAt,
+      }));
+
+      allOrders.push(...utilityFormatted);
+    }
+
+    // Sort by date (most recent first)
+    allOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    totalCount = allOrders.length;
+
+    // Apply pagination
+    const paginatedOrders = allOrders.slice(offset, offset + parseInt(limit));
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+    return res.status(httpStatus.OK).json({
+      success: true,
+      message: "Order history fetched successfully",
+      data: {
+        orders: paginatedOrders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalOrders: totalCount,
+          limit: parseInt(limit),
+        },
+        summary: {
+          totalCafeteriaOrders: allOrders.filter((o) => o.type === "cafeteria").length,
+          totalUtilityOrders: allOrders.filter((o) => o.type === "utility").length,
+          totalSpent: allOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching order history:", error);
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch order history",
+      error: error.message,
+    });
   }
 };
 

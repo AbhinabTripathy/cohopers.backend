@@ -70,6 +70,9 @@ router.get(
 // User history endpoint - combines all booking and payment history
 router.get("/history", authMiddleware, userController.getUserHistory);
 
+// Order history endpoint - combines cafeteria and utility order history
+router.get("/order-history", authMiddleware, userController.getOrderHistory);
+
 router.get("/profile", authMiddleware, userController.getUserProfile);
 // Update profile (supports profile photo upload)
 router.put(

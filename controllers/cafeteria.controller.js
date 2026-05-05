@@ -219,20 +219,64 @@ cafeteriaController.placeOrder = async (req, res) => {
   }
 };
 
-// Get user's orders
+// Get user's orders with pagination and filtering
 cafeteriaController.getUserOrders = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 10, status, fromDate, toDate } = req.query;
 
-    const orders = await CafeteriaOrder.findAll({
-      where: { userId },
+    // Build where clause for filtering
+    const whereClause = { userId };
+    
+    if (status) {
+      whereClause.status = status;
+    }
+
+    if (fromDate || toDate) {
+      whereClause.createdAt = {};
+      if (fromDate) {
+        whereClause.createdAt[Op.gte] = new Date(fromDate);
+      }
+      if (toDate) {
+        whereClause.createdAt[Op.lte] = new Date(toDate);
+      }
+    }
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const { count, rows: orders } = await CafeteriaOrder.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Space,
+          as: "space",
+          attributes: ["id", "spaceName", "cabinNumber", "roomNumber", "seater"],
+        },
+        {
+          model: Kyc,
+          as: "kyc",
+          attributes: ["id", "companyName"],
+        },
+      ],
       order: [["createdAt", "DESC"]],
+      limit: parseInt(limit),
+      offset: offset,
     });
+
+    const totalPages = Math.ceil(count / parseInt(limit));
 
     return res.status(httpStatus.OK).json({
       success: true,
-      message: "User orders fetched successfully",
-      data: orders,
+      message: "User cafeteria orders fetched successfully",
+      data: {
+        orders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalOrders: count,
+          limit: parseInt(limit),
+        },
+      },
     });
   } catch (error) {
     console.error("Error fetching user orders:", error);

@@ -856,13 +856,33 @@ inventoryController.placeUtilityOrder = async (req, res) => {
   }
 };
 
-// Get logged-in user's utility orders
+// Get logged-in user's utility orders with pagination and filtering
 inventoryController.getUserUtilityOrders = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 10, status, fromDate, toDate } = req.query;
 
-    const orders = await UtilityOrder.findAll({
-      where: { userId },
+    // Build where clause for filtering
+    const whereClause = { userId };
+    
+    if (status) {
+      whereClause.status = status;
+    }
+
+    if (fromDate || toDate) {
+      whereClause.createdAt = {};
+      if (fromDate) {
+        whereClause.createdAt[Op.gte] = new Date(fromDate);
+      }
+      if (toDate) {
+        whereClause.createdAt[Op.lte] = new Date(toDate);
+      }
+    }
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const { count, rows: orders } = await UtilityOrder.findAndCountAll({
+      where: whereClause,
       include: [
         {
           model: Utility,
@@ -871,12 +891,24 @@ inventoryController.getUserUtilityOrders = async (req, res) => {
         },
       ],
       order: [["createdAt", "DESC"]],
+      limit: parseInt(limit),
+      offset: offset,
     });
+
+    const totalPages = Math.ceil(count / parseInt(limit));
 
     return res.status(200).json({
       success: true,
       message: "User utility orders fetched successfully",
-      data: orders,
+      data: {
+        orders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalOrders: count,
+          limit: parseInt(limit),
+        },
+      },
     });
   } catch (error) {
     console.error("Error fetching user utility orders:", error);
