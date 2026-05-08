@@ -10,11 +10,11 @@ exports.emailTemplate = ({
     <h2>Booking Update - CoHopers</h2>
 
     <p><b>Status:</b> ${status}</p>
-    <p><b>Client Name:</b> ${clientName}</p>
-    <p><b>Company Name:</b> ${companyName}</p>
+    <p><b>Client Name:</b> ${clientName || "N/A"}</p>
+    <p><b>Company Name:</b> ${companyName || "N/A"}</p>
     <p><b>Booking Type:</b> ${bookingType}</p>
     <p><b>Date:</b> ${date}</p>
-    <p><b>Amount:</b> ₹${amount}</p>
+    <p><b>Amount:</b> ${amount ? `₹${amount}` : "N/A"}</p>
 
     <br/>
 

@@ -746,7 +746,7 @@ meetingRoomController.bookRoom = async (req, res) => {
     try {
       // Fetch KYC for company name
       const kyc = await Kyc.findOne({ where: { userId } });
-      const kycCompanyName = kyc ? kyc.companyName || kyc.name || "N/A" : "N/A";
+      const kycCompanyName = kyc ? (kyc.type === "Freelancer" ? "Freelancer" : (kyc.companyName || "N/A")) : "N/A";
       // Prepare common data
       const emailData = {
         clientName: userName,
@@ -952,7 +952,7 @@ meetingRoomController.verifyBooking = async (req, res) => {
     //  EMAIL + PUSH
     try {
       const bookingKyc = await Kyc.findOne({ where: { userId: booking.userId } });
-      const bookingCompanyName = bookingKyc ? bookingKyc.companyName || bookingKyc.name || "N/A" : "N/A";
+      const bookingCompanyName = bookingKyc ? (bookingKyc.type === "Freelancer" ? "Freelancer" : (bookingKyc.companyName || "N/A")) : "N/A";
       const emailData = {
         clientName: booking.username,
         companyName: bookingCompanyName,

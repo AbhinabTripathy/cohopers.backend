@@ -356,8 +356,8 @@ adminController.verifySpaceBooking = async (req, res) => {
     // Send email notification to user
     try {
       const emailData = {
-        clientName: booking.user.userName,
-        companyName: booking.kyc?.companyName || "N/A",
+        clientName: booking.user.username,
+        companyName: booking.kyc?.type === "Freelancer" ? "Freelancer" : (booking.kyc?.companyName || "N/A"),
         amount: booking.amount,
         date: booking.date,
         bookingType: "Space Booking",
@@ -817,11 +817,17 @@ adminController.verifyKyc = async (req, res) => {
 
     //EMAIL and PUSH ONLY IF USER EXISTS
     if (user) {
+      // Get booking details if associated with KYC
+      let booking = null;
+      if (kyc.bookingId) {
+        booking = await require("../models").Booking.findByPk(kyc.bookingId);
+      }
+
       const emailHtml = emailTemplate({
-        clientName: user.name,
-        companyName: user.companyName || "N/A",
-        amount: "-",
-        date: new Date().toDateString(),
+        clientName: user.username,
+        companyName: kyc.type === "Freelancer" ? "Freelancer" : (kyc.companyName || "N/A"),
+        amount: booking ? booking.amount : "",
+        date: booking ? new Date(booking.date).toDateString() : new Date().toDateString(),
         bookingType: "KYC",
         status: status === "Approve" ? "KYC Approved" : "KYC Rejected",
       });
