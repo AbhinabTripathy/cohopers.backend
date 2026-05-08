@@ -573,6 +573,18 @@ meetingRoomController.bookRoom = async (req, res) => {
     const userPhone = req.user.mobile;
     const userId = req.user.id;
 
+    // Check if user has approved KYC to allow booking
+    const userKyc = await Kyc.findOne({ where: { userId } });
+    const hasApprovedKyc = userKyc && userKyc.status === "Approve";
+
+    if (!hasApprovedKyc) {
+      return res.error(
+        httpStatus.FORBIDDEN,
+        false,
+        "KYC approval is required to book spaces and meeting rooms",
+      );
+    }
+
     // Determine memberType from the authenticated user's userType in DB,
     // ignoring any client-supplied value to prevent manipulation
     const resolvedMemberType = req.user.userType === "member" ? "Member" : (memberType || "Non-Member");
@@ -744,9 +756,8 @@ meetingRoomController.bookRoom = async (req, res) => {
     const booking = await RoomBooking.create(bookingData);
     // EMAIL and PUSH NOTIFICATIONS
     try {
-      // Fetch KYC for company name
-      const kyc = await Kyc.findOne({ where: { userId } });
-      const kycCompanyName = kyc ? (kyc.type === "Freelancer" ? "Freelancer" : (kyc.companyName || "N/A")) : "N/A";
+      // Use already fetched KYC for company name
+      const kycCompanyName = userKyc ? (userKyc.type === "Freelancer" ? "Freelancer" : (userKyc.companyName || "N/A")) : "N/A";
       // Prepare common data
       const emailData = {
         clientName: userName,

@@ -12,6 +12,16 @@ bookingController.createBooking = async (req, res) => {
   try {
     const { spaceId, date, startDate, endDate, amount } = req.body;
 
+    // Check if user has approved KYC to allow booking
+    const kyc = await Kyc.findOne({ where: { userId: req.user.id } });
+    const hasApprovedKyc = kyc && kyc.status === "Approve";
+
+    if (!hasApprovedKyc) {
+      return res.status(403).json({
+        message: "KYC approval is required to book spaces",
+      });
+    }
+
     const booking = await Booking.create({
       userId: req.user.id,
       spaceId,
@@ -25,9 +35,8 @@ bookingController.createBooking = async (req, res) => {
 
     // Email to admin
     try {
-      const kyc = await Kyc.findOne({ where: { userId: req.user.id } });
       const clientName = req.user.username;
-      const companyName = kyc ? kyc.companyName || kyc.name || "N/A" : "N/A";
+      const companyName = kyc ? (kyc.type === "Freelancer" ? "Freelancer" : (kyc.companyName || "N/A")) : "N/A";
       const html = `
         <h2>New Booking Created</h2>
         <p><b>Booking ID:</b> ${booking.id}</p>

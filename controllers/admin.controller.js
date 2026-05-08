@@ -809,11 +809,9 @@ adminController.verifyKyc = async (req, res) => {
     //  Get user details
     const user = await User.findByPk(kyc.userId);
 
-    // If a visitor's KYC is approved, upgrade them to member so they can book spaces/meeting rooms
-    if (user && status === "Approve" && user.userType === "visitor") {
-      user.userType = "member";
-      await user.save();
-    }
+    // Don't upgrade to member on KYC approval
+    // Only people with spaces are active members
+    // KYC approval allows anyone to book regardless of userType
 
     //EMAIL and PUSH ONLY IF USER EXISTS
     if (user) {
