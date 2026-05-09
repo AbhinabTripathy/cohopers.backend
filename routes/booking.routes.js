@@ -5,13 +5,13 @@ const upload = require("../middlewares/upload.middleware");
 const authMemberMiddleware = require("../middlewares/authMemberMiddleware");
 const authUserMiddleware = require("../middlewares/authUserMiddleware");
 
-// User books a space (members only)
-router.post("/book/space", authMemberMiddleware, bookingController.createBooking);
+// User books a space (requires approved KYC)
+router.post("/book/space", authUserMiddleware, bookingController.createBooking);
 
-// Upload payment screenshot (members only)
+// Upload payment screenshot (requires approved KYC)
 router.post(
   "/:id/payment",
-  authMemberMiddleware,
+  authUserMiddleware,
   upload("payment-screenshots").single("paymentScreenshot"),
   bookingController.uploadPayment,
 );
