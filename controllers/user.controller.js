@@ -57,13 +57,13 @@ userController.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user — userType is always 'member' for this endpoint
+    // Create new user — userType is always 'visitor' by default until they get a space assigned
     const newUser = await User.create({
       username: userName,
       email,
       mobile,
       password: hashedPassword,
-      userType: "member",
+      userType: "visitor",
     });
 
     // Remove password from response

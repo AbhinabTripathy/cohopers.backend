@@ -33,7 +33,7 @@ const User = sequelize.define(
     },
     userType: {
       type: DataTypes.ENUM("member", "visitor"),
-      defaultValue: "member",
+      defaultValue: "visitor",
     },
     idProof: {
       type: DataTypes.STRING,

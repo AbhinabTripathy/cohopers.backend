@@ -319,6 +319,19 @@ adminController.verifySpaceBooking = async (req, res) => {
       if (remarks) booking.negotiationRemarks = remarks;
     }
     booking.status = status;
+    
+    // If booking is confirmed, update user to member and assign space details
+    if (status === "Confirm") {
+      await User.update(
+        {
+          userType: "member",
+          cabinNumber: booking.space?.cabinNumber || null,
+          roomNumber: booking.space?.roomNumber || null,
+        },
+        { where: { id: booking.userId } }
+      );
+    }
+    
     await booking.save();
     try {
       const pushId = await sendPushToUserTopic(booking.userId, {
