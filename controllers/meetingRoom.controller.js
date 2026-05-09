@@ -657,9 +657,10 @@ meetingRoomController.bookRoom = async (req, res) => {
     // Calculate total amount
     let totalAmount;
     if (bookingType === "Hourly" && timeSlots && timeSlots.length > 0) {
-      // For hourly bookings, calculate based on number of slots and duration
-      const hourMultiplier = duration === "1 Hour" ? 1 : 0.5; // 30 min = 0.5 hour
-      const totalHours = timeSlots.length * hourMultiplier;
+      // For hourly bookings, calculate based on number of slots
+      // Each slot is 30 minutes for members, 60 minutes for non-members
+      const slotDurationMinutes = resolvedMemberType === "Member" ? 30 : 60;
+      const totalHours = (timeSlots.length * slotDurationMinutes) / 60;
       // Base price is per hour
       const subtotal = basePrice * totalHours;
       //GST 18% for hourly bookings
