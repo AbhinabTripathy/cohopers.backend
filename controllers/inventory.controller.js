@@ -110,7 +110,7 @@ inventoryController.addSpace = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: "Space added successfully with GST and available dates",
+      message: "Space added successfully with available dates",
       data: await Space.findByPk(newSpace.id, {
         include: [{ model: AvailableDate, as: "availableDates" }],
       }),
@@ -165,6 +165,7 @@ inventoryController.getAllSpaces = async (req, res, next) => {
         isActive: s.isActive,
         availability: s.availability,
         images: imagesStr,
+        pricingNote: "(Excluding GST)",
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         availableDates,
@@ -200,7 +201,10 @@ inventoryController.getSpaceById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Space retrieved successfully",
-      data: space,
+      data: {
+        ...space.toJSON(),
+        pricingNote: "(Excluding GST)",
+      },
     });
   } catch (error) {
     next(error);
