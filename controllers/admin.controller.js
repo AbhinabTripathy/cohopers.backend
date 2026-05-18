@@ -284,7 +284,7 @@ adminController.verifySpaceBooking = async (req, res) => {
         {
           model: User,
           as: "user",
-          attributes: ["id", "userName", "email"],
+          attributes: ["id", "username", "email"],
         },
         {
           model: Space,
