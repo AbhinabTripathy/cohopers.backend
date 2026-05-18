@@ -285,6 +285,7 @@ adminController.verifySpaceBooking = async (req, res) => {
           model: User,
           as: "user",
           attributes: ["id", "username", "email"],
+          include: [{ model: Kyc, as: "kyc", attributes: { exclude: ["createdAt", "updatedAt"] } }],
         },
         {
           model: Space,
@@ -374,9 +375,10 @@ adminController.verifySpaceBooking = async (req, res) => {
 
     // Send email notification to user
     try {
+      const kyc = booking.kyc || booking.user?.kyc;
       const emailData = {
         clientName: booking.user.username,
-        companyName: booking.kyc?.type === "Freelancer" ? "Freelancer" : (booking.kyc?.companyName || "N/A"),
+        companyName: kyc?.type === "Freelancer" ? "Freelancer" : (kyc?.companyName || "N/A"),
         amount: booking.negotiatedAmount,
         date: booking.date,
         bookingType: "Space Booking",
