@@ -2,10 +2,29 @@ exports.emailTemplate = ({
   clientName,
   companyName,
   amount,
+  negotiatedAmount,
+  depositedAmount,
   date,
   bookingType,
   status,
 }) => {
+  const showBreakdown =
+    negotiatedAmount !== undefined &&
+    negotiatedAmount !== null &&
+    depositedAmount !== undefined &&
+    depositedAmount !== null;
+
+  const totalPayable = showBreakdown
+    ? Number(negotiatedAmount) + Number(depositedAmount)
+    : null;
+
+  const amountSection = showBreakdown
+    ? `
+    <p><b>Negotiated Amount:</b> ₹${Number(negotiatedAmount).toLocaleString("en-IN")}</p>
+    <p><b>Deposited Amount:</b> ₹${Number(depositedAmount).toLocaleString("en-IN")}</p>
+    <p><b>Total Payable:</b> ₹${totalPayable.toLocaleString("en-IN")}</p>`
+    : `<p><b>Amount:</b> ${amount ? `₹${amount}` : "N/A"}</p>`;
+
   return `
     <h2>Booking Update - CoHopers</h2>
 
@@ -14,7 +33,7 @@ exports.emailTemplate = ({
     <p><b>Company Name:</b> ${companyName || "N/A"}</p>
     <p><b>Booking Type:</b> ${bookingType}</p>
     <p><b>Date:</b> ${date}</p>
-    <p><b>Amount:</b> ${amount ? `₹${amount}` : "N/A"}</p>
+    ${amountSection}
 
     <br/>
 

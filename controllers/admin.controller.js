@@ -241,6 +241,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
       amount: booking.amount,
       originalAmount: booking.originalAmount,
       negotiatedAmount: booking.negotiatedAmount,
+      depositedAmount: booking.depositedAmount,
       status: booking.status,
       paymentScreenshot: booking.paymentScreenshot,
     }));
@@ -263,7 +264,7 @@ adminController.getAllSpaceBookings = async (req, res) => {
 adminController.verifySpaceBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, remarks, finalAmount } = req.body;
+    const { status, remarks, finalAmount, depositedAmount } = req.body;
 
     if (!id) {
       return res.status(HttpStatus.BAD_REQUEST).json({
@@ -324,6 +325,8 @@ adminController.verifySpaceBooking = async (req, res) => {
       booking.negotiatedAmount = amt;
       booking.amount = amt;
       if (remarks) booking.negotiationRemarks = remarks;
+      const dep = (depositedAmount !== undefined && depositedAmount !== null && depositedAmount !== '') ? Number(depositedAmount) : null;
+      booking.depositedAmount = (dep !== null && Number.isFinite(dep) && dep >= 0) ? dep : null;
     }
     booking.status = status;
     
@@ -379,6 +382,8 @@ adminController.verifySpaceBooking = async (req, res) => {
       const emailData = {
         clientName: booking.user.username,
         companyName: kyc?.type === "Freelancer" ? "Freelancer" : (kyc?.companyName || "N/A"),
+        negotiatedAmount: booking.negotiatedAmount,
+        depositedAmount: booking.depositedAmount,
         amount: booking.negotiatedAmount,
         date: booking.date,
         bookingType: "Space Booking",

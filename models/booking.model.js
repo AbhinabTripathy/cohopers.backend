@@ -83,6 +83,10 @@ const Booking = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    depositedAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
   },
   {
     tableName: "bookings",
