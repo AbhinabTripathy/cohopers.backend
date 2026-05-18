@@ -306,7 +306,13 @@ adminController.verifySpaceBooking = async (req, res) => {
       });
     }
 
-    if (status === "Confirm" && finalAmount !== undefined) {
+    if (status === "Confirm") {
+      if (finalAmount === undefined || finalAmount === null || finalAmount === "") {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          message: "finalAmount is required to confirm a booking",
+        });
+      }
       const amt = Number(finalAmount);
       if (!Number.isFinite(amt) || amt <= 0) {
         return res.status(HttpStatus.BAD_REQUEST).json({
@@ -371,7 +377,7 @@ adminController.verifySpaceBooking = async (req, res) => {
       const emailData = {
         clientName: booking.user.username,
         companyName: booking.kyc?.type === "Freelancer" ? "Freelancer" : (booking.kyc?.companyName || "N/A"),
-        amount: booking.amount,
+        amount: booking.negotiatedAmount,
         date: booking.date,
         bookingType: "Space Booking",
         status: status === "Confirm" ? "Confirmed" : "Rejected",
