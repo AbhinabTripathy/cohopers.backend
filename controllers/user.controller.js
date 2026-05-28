@@ -165,8 +165,13 @@ userController.login = async (req, res) => {
     const userResponse = user.toJSON();
     delete userResponse.password;
 
+    // Use KYC personal name as username when available
+    if (kycApproved && userKyc.name) {
+      userResponse.username = userKyc.name;
+    }
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: "user" },
+      { id: user.id, username: userResponse.username, role: "user" },
       process.env.APP_SUPER_SECRET_KEY,
       { expiresIn: "24h" },
     );
@@ -410,6 +415,7 @@ userController.getUserProfile = async (req, res) => {
 
     // response
     const profileData = {
+      name: kyc.name || null,
       companyOrFreelancerName:
         kyc.type === "Company" ? kyc.companyName : kyc.name || "N/A",
       email: kyc.email,
@@ -968,8 +974,13 @@ userController.visitorLogin = async (req, res) => {
     const userResponse = user.toJSON();
     delete userResponse.password;
 
+    // Use KYC personal name as username when available
+    if (kycApproved && userKyc.name) {
+      userResponse.username = userKyc.name;
+    }
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: "user" },
+      { id: user.id, username: userResponse.username, role: "user" },
       process.env.APP_SUPER_SECRET_KEY,
       { expiresIn: "24h" },
     );
