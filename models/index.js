@@ -11,6 +11,7 @@ const CafeteriaItem = require("./cafeteriaItem.model");
 const FCMToken = require("./fcmToken.model");
 const Utility = require("./utility.model");
 const UtilityOrder = require("./utilityOrder.model");
+const Vehicle = require("./vehicle.model");
 
 // Space & AvailableDate
 Space.hasMany(AvailableDate, {
@@ -125,6 +126,14 @@ Space.hasMany(UtilityOrder, {
 });
 UtilityOrder.belongsTo(Space, { foreignKey: "spaceId", as: "space" });
 
+// Vehicles
+User.hasMany(Vehicle, {
+  foreignKey: "userId",
+  as: "vehicles",
+  onDelete: "CASCADE",
+});
+Vehicle.belongsTo(User, { foreignKey: "userId", as: "user" });
+
 // Export all models
 module.exports = {
   Space,
@@ -140,4 +149,5 @@ module.exports = {
   FCMToken,
   Utility,
   UtilityOrder,
+  Vehicle,
 };

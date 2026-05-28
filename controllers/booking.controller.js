@@ -1,4 +1,4 @@
-const { Booking, User, Space, Kyc } = require("../models");
+const { Booking, User, Space, Kyc, Vehicle } = require("../models");
 const {
   sendMail,
   sendPushToTopic,
@@ -203,6 +203,31 @@ bookingController.submitKyc = async (req, res) => {
 
     const kyc = await Kyc.create(kycData);
 
+    // Save vehicle details if provided
+    let vehicles = [];
+    if (req.body.vehicles) {
+      let vehicleList;
+      try {
+        vehicleList = typeof req.body.vehicles === "string"
+          ? JSON.parse(req.body.vehicles)
+          : req.body.vehicles;
+      } catch {
+        vehicleList = [];
+      }
+      if (Array.isArray(vehicleList) && vehicleList.length > 0) {
+        const vehicleData = vehicleList
+          .filter((v) => v.vehicleNumber && v.vehicleType)
+          .map((v) => ({
+            userId,
+            vehicleNumber: String(v.vehicleNumber).trim(),
+            vehicleType: String(v.vehicleType).trim(),
+          }));
+        if (vehicleData.length > 0) {
+          vehicles = await Vehicle.bulkCreate(vehicleData);
+        }
+      }
+    }
+
     //  Send Email to Admin
     await sendMail(
       process.env.ADMIN_EMAIL,
@@ -210,7 +235,7 @@ bookingController.submitKyc = async (req, res) => {
       `<h2>New KYC Submission</h2><p><b>Client Name:</b> ${name || req.user.username}</p><p><b>Company Name:</b> ${companyName || "N/A"}</p><p><b>KYC Type:</b> ${type}</p><p><b>User ID:</b> ${userId}</p>`,
     );
 
-    res.json({ message: "KYC submitted successfully", kyc });
+    res.json({ message: "KYC submitted successfully", kyc, vehicles });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

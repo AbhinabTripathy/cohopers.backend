@@ -82,6 +82,12 @@ router.put(
   userController.updateUserProfile,
 );
 
+// Vehicle management
+router.get("/vehicles", authMiddleware, userController.getVehicles);
+router.post("/vehicles", authMiddleware, userController.addVehicle);
+router.put("/vehicles/:id", authMiddleware, userController.updateVehicle);
+router.delete("/vehicles/:id", authMiddleware, userController.deleteVehicle);
+
 //same for all user put the token of user in bearer token and that will be logout
 router.get("/logout", userController.logout);
 

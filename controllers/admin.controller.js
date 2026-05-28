@@ -8,6 +8,7 @@ const {
   Booking,
   Kyc,
   FCMToken,
+  Vehicle,
 } = require("../models");
 const sequelize = require("../config/db");
 const HttpStatus = require("../enums/httpStatusCode.enum");
@@ -392,7 +393,7 @@ adminController.verifySpaceBooking = async (req, res) => {
 
       const html = emailTemplate(emailData);
 
-      // Send to User
+      // Send to User 
       await sendMail(
         booking.user.email,
         `Space Booking ${status === "Confirm" ? "Confirmed" : "Rejected"}`,
@@ -612,6 +613,11 @@ adminController.getAllActiveMembers = async (req, res) => {
               as: "kyc",
               attributes: { exclude: ["createdAt", "updatedAt"] },
             },
+            {
+              model: Vehicle,
+              as: "vehicles",
+              attributes: ["id", "vehicleNumber", "vehicleType"],
+            },
           ],
         },
         {
@@ -681,6 +687,16 @@ adminController.getAllActiveMembers = async (req, res) => {
               }
             : null;
         })(),
+        vehicleNumbers: booking.user && booking.user.vehicles
+          ? booking.user.vehicles.map((v) => v.vehicleNumber)
+          : [],
+        vehicles: booking.user && booking.user.vehicles
+          ? booking.user.vehicles.map((v) => ({
+              id: v.id,
+              vehicleNumber: v.vehicleNumber,
+              vehicleType: v.vehicleType,
+            }))
+          : [],
       };
     });
 

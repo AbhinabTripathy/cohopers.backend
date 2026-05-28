@@ -10,6 +10,7 @@ const {
   CafeteriaOrder,
   UtilityOrder,
   Utility,
+  Vehicle,
 } = require("../models");
 const adminController = require("./admin.controller");
 const httpStatus = require("../enums/httpStatusCode.enum");
@@ -340,6 +341,11 @@ userController.getUserProfile = async (req, res) => {
     if (user.userType === "visitor") {
       const kyc = await Kyc.findOne({ where: { userId } });
       const baseUrl = process.env.BASE_URL || "";
+      const vehicles = await Vehicle.findAll({
+        where: { userId },
+        attributes: ["id", "vehicleNumber", "vehicleType"],
+        order: [["createdAt", "ASC"]],
+      });
 
       return res.status(200).json({
         success: true,
@@ -364,6 +370,7 @@ userController.getUserProfile = async (req, res) => {
                 status: kyc.status,
               }
             : null,
+          vehicles,
         },
       });
     }
@@ -394,6 +401,13 @@ userController.getUserProfile = async (req, res) => {
         })
       : 0;
 
+    // Fetch user's vehicles
+    const vehicles = await Vehicle.findAll({
+      where: { userId },
+      attributes: ["id", "vehicleNumber", "vehicleType"],
+      order: [["createdAt", "ASC"]],
+    });
+
     // response
     const profileData = {
       companyOrFreelancerName:
@@ -403,6 +417,7 @@ userController.getUserProfile = async (req, res) => {
       teamSize: teamCount,
       profilePhoto: kyc.photo || null,
       type: kyc.type,
+      vehicles,
     };
 
     return res.status(200).json({
@@ -1132,6 +1147,75 @@ userController.getOrderHistory = async (req, res) => {
       message: "Failed to fetch order history",
       error: error.message,
     });
+  }
+};
+
+// ─── Vehicle Management ────────────────────────────────────────────────────
+
+// GET /user/vehicles — list the current user's vehicles
+userController.getVehicles = async (req, res) => {
+  try {
+    const vehicles = await Vehicle.findAll({
+      where: { userId: req.user.id },
+      attributes: ["id", "vehicleNumber", "vehicleType", "createdAt"],
+      order: [["createdAt", "ASC"]],
+    });
+    return res.success(httpStatus.OK, true, "Vehicles fetched successfully", { vehicles });
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Failed to fetch vehicles", error.message);
+  }
+};
+
+// POST /user/vehicles — add a new vehicle
+userController.addVehicle = async (req, res) => {
+  try {
+    const { vehicleNumber, vehicleType } = req.body;
+    if (!vehicleNumber || !vehicleType) {
+      return res.error(httpStatus.BAD_REQUEST, false, "vehicleNumber and vehicleType are required");
+    }
+    const vehicle = await Vehicle.create({
+      userId: req.user.id,
+      vehicleNumber: String(vehicleNumber).trim(),
+      vehicleType: String(vehicleType).trim(),
+    });
+    return res.success(httpStatus.CREATED, true, "Vehicle added successfully", { vehicle });
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Failed to add vehicle", error.message);
+  }
+};
+
+// PUT /user/vehicles/:id — update a vehicle
+userController.updateVehicle = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findOne({
+      where: { id: req.params.id, userId: req.user.id },
+    });
+    if (!vehicle) {
+      return res.error(httpStatus.NOT_FOUND, false, "Vehicle not found");
+    }
+    const { vehicleNumber, vehicleType } = req.body;
+    if (vehicleNumber) vehicle.vehicleNumber = String(vehicleNumber).trim();
+    if (vehicleType) vehicle.vehicleType = String(vehicleType).trim();
+    await vehicle.save();
+    return res.success(httpStatus.OK, true, "Vehicle updated successfully", { vehicle });
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Failed to update vehicle", error.message);
+  }
+};
+
+// DELETE /user/vehicles/:id — remove a vehicle
+userController.deleteVehicle = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findOne({
+      where: { id: req.params.id, userId: req.user.id },
+    });
+    if (!vehicle) {
+      return res.error(httpStatus.NOT_FOUND, false, "Vehicle not found");
+    }
+    await vehicle.destroy();
+    return res.success(httpStatus.OK, true, "Vehicle deleted successfully");
+  } catch (error) {
+    return res.error(httpStatus.INTERNAL_SERVER_ERROR, false, "Failed to delete vehicle", error.message);
   }
 };
 
