@@ -2,6 +2,7 @@ const { CafeteriaOrder, CafeteriaItem, User, Booking, Space, Kyc } = require("..
 const httpStatus = require("../enums/httpStatusCode.enum");
 const { Op } = require("sequelize");
 const { sendPushToTopic, sendPushToUserTopic } = require("../utils/helper");
+const googleSheetsService = require("../utils/googleSheets.service");
 
 const cafeteriaController = {};
 
@@ -175,6 +176,33 @@ cafeteriaController.placeOrder = async (req, res) => {
       });
 
       createdOrders.push(order);
+
+      // Append to Google Sheets asynchronously (non-blocking)
+      // This ensures the order is created successfully even if Google Sheets fails
+      (async () => {
+        try {
+          // Fetch user data
+          const user = await User.findByPk(userId);
+          
+          // Fetch space data if available
+          let space = null;
+          if (currentSpaceId) {
+            space = await Space.findByPk(currentSpaceId);
+          }
+          
+          // Fetch KYC data if available
+          let kyc = null;
+          if (kycId) {
+            kyc = await Kyc.findByPk(kycId);
+          }
+          
+          // Append order to Google Spreadsheet
+          await googleSheetsService.appendCoffeeOrderRow(order, user, space, kyc);
+        } catch (error) {
+          // Error is already logged by googleSheetsService
+          // Continue without blocking order creation
+        }
+      })();
     }
 
     try {
