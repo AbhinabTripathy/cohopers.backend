@@ -111,6 +111,7 @@ class GoogleSheetsService {
         spreadsheetId: this.spreadsheetId,
         range: 'Sheet1!A:O', // Columns A to O (15 columns)
         valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
         resource: {
           values: values,
         },
