@@ -888,7 +888,7 @@ userController.visitorRegister = async (req, res) => {
     const token = jwt.sign(
       { id: newUser.id, username: newUser.username, role: "user" },
       process.env.APP_SUPER_SECRET_KEY,
-      { expiresIn: "24h" },
+      { expiresIn: "12h" },
     );
 
     return res.success(httpStatus.CREATED, true, responseMessages.SAVE, {
@@ -982,7 +982,7 @@ userController.visitorLogin = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, username: userResponse.username, role: "user" },
       process.env.APP_SUPER_SECRET_KEY,
-      { expiresIn: "24h" },
+      { expiresIn: "12h" },
     );
 
     return res.success(httpStatus.OK, true, "Login successful", {
