@@ -101,7 +101,7 @@ class GoogleSheetsService {
           order.isMonthlyPayment ? 'Monthly' : 'One-Time',   // Payment Method
           order.paid || '',                                  // Payment Status
           order.totalAmount || '',                           // Amount
-          order.createdAt?.toISOString?.() || new Date().toISOString(), // Order Date
+          (() => { const d = order.createdAt ? new Date(order.createdAt) : new Date(); return new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().replace('T', ' ').replace(/\..+/, '') + ' IST'; })(), // Order Date
           order.status || '',                                // Status
         ]
       ];
